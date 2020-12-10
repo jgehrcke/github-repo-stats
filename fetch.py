@@ -1,0 +1,395 @@
+#!/usr/bin/env python
+# Copyright 2018 - 2020 Dr. Jan-Philip Gehrcke
+#
+# Licensed under the Apache License, Version 2.0 (the "License"); you may not
+# use this file except in compliance with the License. You may obtain a copy of
+# the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations under
+# the License.
+
+import argparse
+import logging
+import os
+import json
+import pickle
+import concurrent.futures
+import shutil
+from datetime import datetime
+
+import sys
+
+
+import pandas as pd
+from github import Github
+import requests
+import retrying
+import pytz
+
+
+"""
+prior art
+https://github.com/MTG/github-traffic
+https://github.com/nchah/github-traffic-stats/
+https://github.com/sangonzal/repository-traffic-action
+
+makes use of code and methods from my other projects at
+https://github.com/jgehrcke/dcos-dev-prod-analysis
+https://github.com/jgehrcke/bouncer-log-analysis
+https://github.com/jgehrcke/goeffel
+"""
+
+
+log = logging.getLogger()
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s.%(msecs)03d %(levelname)s:%(threadName)s: %(message)s",
+    datefmt="%y%m%d-%H:%M:%S",
+)
+
+
+# Get tz-aware datetime object corresponding to invocation time.
+NOW = pytz.timezone("UTC").localize(datetime.utcnow())
+INVOCATION_TIME_STRING = NOW.strftime("%Y-%m-%d_%H%M%S")
+
+if not os.environ.get("GHRS_GITHUB_APITOKEN", None):
+    sys.exit("error: environment variable GHRS_GITHUB_APITOKEN empty or not set")
+
+GHUB = Github(login_or_token=os.environ["GHRS_GITHUB_APITOKEN"], per_page=100)
+
+
+def main():
+    args = parse_args()
+    # Full name of repo with slash (including owner/org)
+    repo = GHUB.get_repo(args.repo)
+    log.info("Working with repository `%s`", repo)
+    log.info("Request quota limit: %s", GHUB.get_rate_limit())
+
+    (
+        df_views_clones,
+        df_referrers_snapshot_now,
+        df_paths_snapshot_now,
+    ) = fetch_all_traffic_api_endpoints(repo)
+
+    outdir_path = args.output_directory
+    log.info("current working directory: %s", os.getcwd())
+    log.info("write output CSV files to directory: %s", outdir_path)
+
+    df_views_clones.to_csv(
+        os.path.join(
+            outdir_path, f"{INVOCATION_TIME_STRING}_views_clones_series_fragment.csv"
+        )
+    )
+    df_referrers_snapshot_now.to_csv(
+        os.path.join(
+            outdir_path, f"{INVOCATION_TIME_STRING}_top_referrers_snapshot.csv"
+        )
+    )
+    df_paths_snapshot_now.to_csv(
+        os.path.join(outdir_path, f"{INVOCATION_TIME_STRING}_top_paths_snapshot.csv")
+    )
+
+    log.info("done!")
+
+
+def fetch_all_traffic_api_endpoints(repo):
+
+    # These are not so straight-forward to aggregate, because "Get the top 10
+    # popular contents over the last 14 days" and "Get the top 10 referrers
+    # over the last 14 days." That is, you can never see these for a particular
+    # day. It may therefore be important to actually fetch the data every day
+    # to see these _change_ with a credible daily resolution!
+    df_referrers_snapshot_now = referrers_to_df(fetch_top_referrers(repo))
+    df_paths_snapshot_now = paths_to_df(fetch_top_paths(repo))
+    # print(df_paths_snapshot_now)
+    # print(df_referrers_snapshot_now)
+
+    # Simple time series data type, with one sample per day for the last 14
+    # days.
+    df_clones = clones_or_views_to_df(fetch_clones(repo), "clones")
+    df_views = clones_or_views_to_df(fetch_views(repo), "views")
+
+    # Note that df_clones and df_views should have the same datetime index, but
+    # there is no guarantee for that. Create two separate data frames, then
+    # merge / align dynamically.
+    if not df_clones.index.equals(df_views.index):
+        log.info("special case: df_views and df_clones have different index")
+    else:
+        log.info("indices of df_views and df_clones are equal")
+
+    # https://pandas.pydata.org/pandas-docs/stable/user_guide/merging.html#set-logic-on-the-other-axes
+    # Build union of the two data frames. Zero information loss, in case the
+    # two indices aree different.
+    df_views_clones = pd.concat([df_clones, df_views], axis=1, join="outer")
+    log.info("df_views_clones:\n%s", df_views_clones)
+
+    # print(NOW.isoformat())
+
+    return df_views_clones, df_referrers_snapshot_now, df_paths_snapshot_now
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(
+        description="Fetch traffic data for GitHub repository. Requires the "
+        "environment variables GITHUB_USERNAME and GITHUB_APITOKEN to be set."
+    )
+    parser.add_argument(
+        "repo",
+        metavar="REPOSITORY",
+        help="Owner/organization and repository. Must contain a slash. "
+        "Example: coke/truck",
+    )
+
+    parser.add_argument(
+        "--output-directory",
+        type=str,
+        default="",
+        help="default: _ghrs_{owner}_{repo}",
+    )
+
+    args = parser.parse_args()
+
+    if "/" not in args.repo:
+        sys.exit("missing slash in REPOSITORY spec")
+
+    ownerid, repoid = args.repo.split("/")
+    outdir_path_default = f"_ghrs_{ownerid}_{repoid}"
+
+    if not args.output_directory:
+        args.output_directory = outdir_path_default
+
+    log.info("processed args: %s", json.dumps(vars(args), indent=2))
+
+    if os.path.exists(args.output_directory):
+        if not os.path.isdir(args.output_directory):
+            log.error(
+                "the specified output directory path does not point to a directory: %s",
+                args.output_directory,
+            )
+            sys.exit(1)
+
+        log.info("output directory already exists: %s", args.output_directory)
+
+    else:
+        log.info("create output directory: %s", args.output_directory)
+        log.info("absolute path: %s", os.path.abspath(args.output_directory))
+        # If there is a race: do not error out.
+        os.makedirs(args.output_directory, exist_ok=True)
+
+    return args
+
+
+def referrers_to_df(top_referrers):
+    series_referrers = []
+    series_count_unique = []
+    series_count_total = []
+    for p in top_referrers:
+        series_referrers.append(p.referrer)
+        series_count_total.append(p.count)
+        series_count_unique.append(p.uniques)
+
+    df = pd.DataFrame(
+        data={
+            f"count_total": series_count_total,
+            f"count_unique": series_count_unique,
+        },
+        index=series_referrers,
+    )
+    df.index.name = "referrers"
+
+    # Attach metadata to dataframe, still experimental -- also see
+    # https://stackoverflow.com/q/52122674/145400
+    df.attrs["snapshot_time"] = NOW.isoformat()
+    return df
+
+
+def paths_to_df(top_paths):
+
+    series_url_paths = []
+    series_views_unique = []
+    series_views_total = []
+    for p in top_paths:
+        series_url_paths.append(p.path)
+        series_views_total.append(p.count)
+        series_views_unique.append(p.uniques)
+
+    df = pd.DataFrame(
+        data={
+            f"views_total": series_views_total,
+            f"views_unique": series_views_unique,
+        },
+        index=series_url_paths,
+    )
+    df.index.name = "url_paths"
+
+    # Attach metadata to dataframe, new as of pandas 1.0 -- also see
+    # https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.attrs.html
+    # https://github.com/pandas-dev/pandas/issues/28283
+    # https://stackoverflow.com/q/52122674/145400
+    df.attrs["snapshot_time"] = NOW.isoformat()
+    return df
+
+
+def clones_or_views_to_df(items, metric):
+    assert metric in ["clones", "views"]
+
+    series_count_total = []
+    series_count_unique = []
+    series_timestamps = []
+    for sample in items:
+        # GitHub API docs say
+        # "Timestamps are aligned to UTC"
+        # `sample.timestamp` is a naive datetime object. Make it tz-aware.
+        ts_aware = pytz.timezone("UTC").localize(sample.timestamp)
+        series_timestamps.append(ts_aware)
+        series_count_total.append(sample.count)
+        series_count_unique.append(sample.uniques)
+
+    df = pd.DataFrame(
+        data={
+            f"{metric}_total": series_count_total,
+            f"{metric}_unique": series_count_unique,
+        },
+        index=series_timestamps,
+    )
+    df.index.name = "time_iso8601"
+
+    # log.info("built dataframe for %s:\n%s", metric, df)
+    # log.info("dataframe datetimeindex detail: %s", df.index)
+    return df
+
+
+def handle_rate_limit_error(exc):
+
+    if "wait a few minutes before you try again" in str(exc):
+        log.warning("GitHub abuse mechanism triggered, wait 60 s, retry")
+        return True
+
+    if "403" in str(exc):
+        log.warning("Exception contains 403, wait 60 s, retry: %s", str(exc))
+        # The request count quota is not necessarily responsible for this
+        # exception, but it usually is. Log the expected local time when the
+        # new quota arrives.
+        unix_timestamp_quota_reset = GHUB.rate_limiting_resettime
+        local_time = datetime.fromtimestamp(unix_timestamp_quota_reset)
+        log.info("New req count quota at: %s", local_time.strftime("%Y-%m-%d %H:%M:%S"))
+        return True
+
+    # For example, `RemoteDisconnected` is a case I have seen in production.
+    if isinstance(exc, requests.exceptions.RequestException):
+        log.warning("RequestException, wait 60 s, retry: %s", str(exc))
+        return True
+
+    return False
+
+
+@retrying.retry(wait_fixed=60000, retry_on_exception=handle_rate_limit_error)
+def fetch_clones(repo):
+    # Data points contain timestamps, one data point per day for the last 14
+    # days.
+    clones = repo.get_clones_traffic()
+    # for c in clones["clones"]:
+    #     print(c)
+
+    # Top-level dict contains an aggregate, return only the detailed samples.
+    return clones["clones"]
+
+
+@retrying.retry(wait_fixed=60000, retry_on_exception=handle_rate_limit_error)
+def fetch_views(repo):
+    # Data points contain timestamps, one data point per day for the last 14
+    # days.
+    views = repo.get_views_traffic()
+    # for v in views["views"]:
+    #     print(v)
+
+    # Top-level dict contains an aggregate, return only the detailed samples.
+    return views["views"]
+
+
+@retrying.retry(wait_fixed=60000, retry_on_exception=handle_rate_limit_error)
+def fetch_top_referrers(repo):
+    # Top referring sites
+    return repo.get_top_referrers()
+
+
+@retrying.retry(wait_fixed=60000, retry_on_exception=handle_rate_limit_error)
+def fetch_top_paths(repo):
+    return repo.get_top_paths()
+
+
+def fetch_traffic_details_in_threadpool(prs_to_fetch_details_for):
+    """
+    Modify `prs_to_fetch_details_for` in-place.
+    # https://github.com/webuildsg/webuild/issues/290 Github does not allow too
+    # many requests being issued concurrently. "We can't give you an exact
+    # number here since the limits are not that simple and we'll be tweaking
+    # them over time, but I'd recommend reducing concurrency as much as
+    # possible, e.g. so that you don't make over ~20 requests concurrently, and
+    # then reducing further if you notice that you're still hitting these
+    # limits." Note(JP): I tried with 20 and immediately ran into an 'abuse'
+    # error message. I tried with 10 and it took 2 minutes to generate an abuse
+    # error message. I will retry with 5 and see. Update many weeks later: the
+    # current configuration seems to work fine. Update: when fetching only
+    # comments for every individual PR the current settings work fine. When
+    # additionally also fetching PR events then I ran into
+    #
+    # 181211-14:05:50.140
+    # ERROR:MainThread: PullRequest(title="Refactor dcos_test_utils.marathon",
+    # number=1772) generated an exception: 403 {'documentation_url':
+    # 'https://developer.github.com/v3/#abuse-rate-limits', 'message': 'You have
+    # triggered an abuse detection mechanism. Please wait a few minutes before
+    # you try again.'}
+    """
+    reqlimit_before = GHUB.get_rate_limit().core.remaining
+    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+
+        # Submit work, build up mapping between futures and pull requests.
+        futures_to_prs = {
+            executor.submit(fetch_details_for_pr, pr): pr
+            for _, pr in prs_to_fetch_details_for.items()
+        }
+
+        count_total = len(futures_to_prs)
+        count_completed = 0
+        count_failed = 0
+
+        for future in concurrent.futures.as_completed(futures_to_prs):
+
+            pr = futures_to_prs[future]
+
+            try:
+                comments, events = future.result()
+                log.info(
+                    "Fetched %s comments, %s events for PR %s",
+                    len(comments),
+                    len(events),
+                    pr.number,
+                )
+
+                count_completed += 1
+
+                if count_completed % 20 == 0:
+                    log.info("Processed %s of %s PRs", count_completed, count_total)
+
+            except Exception as exc:
+                log.error("%r generated an exception: %s" % (pr, exc))
+                count_failed += 1
+
+        log.info("Fetching details succeeded for %s PRs", count_completed)
+        log.info("Fetching details failed for %s PRs", count_failed)
+
+    # Potentially inaccurate log message (if a quota reset happened between
+    # `before` and `after`).
+    reqlimit_after = GHUB.get_rate_limit().core.remaining
+    reqs_performed = reqlimit_before - reqlimit_after
+    log.info("Number of requests performed: %s", reqs_performed)
+
+
+if __name__ == "__main__":
+    main()

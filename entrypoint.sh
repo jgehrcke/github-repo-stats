@@ -16,7 +16,7 @@ REPOSPEC="${GITHUB_REPOSITORY}"
 # For now: hard-code
 REPOSPEC="jgehrcke/covid-19-germany-gae"
 
-if [[ ! $GHRSGCS_BUCKET_NAME ]]; then
+if [[ ! $GHRS_GCS_BUCKET_NAME ]]; then
     echo "error: the env var GHRS_GCS_BUCKET_NAME appears to be empty or not set"
     exit 1
 fi

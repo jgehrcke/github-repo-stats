@@ -33,5 +33,3 @@ COPY entrypoint.sh /entrypoint.sh
 RUN mkdir /rundir && cd /rundir
 WORKDIR /rundir
 ENTRYPOINT ["/entrypoint.sh"]
-
-

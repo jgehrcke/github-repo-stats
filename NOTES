@@ -1,0 +1,7 @@
+GCS support, use
+https://cloud.google.com/storage/docs/gsutil/commands/rsync
+
+S3 support use
+https://docs.aws.amazon.com/cli/latest/reference/s3/sync.html
+
+Use https://github.com/arzzen/git-quick-stats

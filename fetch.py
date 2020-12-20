@@ -57,10 +57,10 @@ logging.basicConfig(
 NOW = pytz.timezone("UTC").localize(datetime.utcnow())
 INVOCATION_TIME_STRING = NOW.strftime("%Y-%m-%d_%H%M%S")
 
-if not os.environ.get("GHRS_GITHUB_APITOKEN", None):
-    sys.exit("error: environment variable GHRS_GITHUB_APITOKEN empty or not set")
+if not os.environ.get("GHRS_GITHUB_API_TOKEN", None):
+    sys.exit("error: environment variable GHRS_GITHUB_API_TOKEN empty or not set")
 
-GHUB = Github(login_or_token=os.environ["GHRS_GITHUB_APITOKEN"], per_page=100)
+GHUB = Github(login_or_token=os.environ["GHRS_GITHUB_API_TOKEN"].strip(), per_page=100)
 
 
 def main():

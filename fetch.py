@@ -99,19 +99,16 @@ def main():
 
 def fetch_all_traffic_api_endpoints(repo):
 
-    # These are not so straight-forward to aggregate, because "Get the top 10
-    # popular contents over the last 14 days" and "Get the top 10 referrers
-    # over the last 14 days." That is, you can never see these for a particular
-    # day. It may therefore be important to actually fetch the data every day
-    # to see these _change_ with a credible daily resolution!
+    log.info("fetch top referrers")
     df_referrers_snapshot_now = referrers_to_df(fetch_top_referrers(repo))
-    df_paths_snapshot_now = paths_to_df(fetch_top_paths(repo))
-    # print(df_paths_snapshot_now)
-    # print(df_referrers_snapshot_now)
 
-    # Simple time series data type, with one sample per day for the last 14
-    # days.
+    log.info("fetch top paths")
+    df_paths_snapshot_now = paths_to_df(fetch_top_paths(repo))
+
+    log.info("fetch data for clones")
     df_clones = clones_or_views_to_df(fetch_clones(repo), "clones")
+
+    log.info("fetch data for views")
     df_views = clones_or_views_to_df(fetch_views(repo), "views")
 
     # Note that df_clones and df_views should have the same datetime index, but
@@ -127,8 +124,6 @@ def fetch_all_traffic_api_endpoints(repo):
     # two indices aree different.
     df_views_clones = pd.concat([df_clones, df_views], axis=1, join="outer")
     log.info("df_views_clones:\n%s", df_views_clones)
-
-    # print(NOW.isoformat())
 
     return df_views_clones, df_referrers_snapshot_now, df_paths_snapshot_now
 
@@ -290,31 +285,18 @@ def handle_rate_limit_error(exc):
 
 @retrying.retry(wait_fixed=60000, retry_on_exception=handle_rate_limit_error)
 def fetch_clones(repo):
-    # Data points contain timestamps, one data point per day for the last 14
-    # days.
     clones = repo.get_clones_traffic()
-    # for c in clones["clones"]:
-    #     print(c)
-
-    # Top-level dict contains an aggregate, return only the detailed samples.
     return clones["clones"]
 
 
 @retrying.retry(wait_fixed=60000, retry_on_exception=handle_rate_limit_error)
 def fetch_views(repo):
-    # Data points contain timestamps, one data point per day for the last 14
-    # days.
     views = repo.get_views_traffic()
-    # for v in views["views"]:
-    #     print(v)
-
-    # Top-level dict contains an aggregate, return only the detailed samples.
     return views["views"]
 
 
 @retrying.retry(wait_fixed=60000, retry_on_exception=handle_rate_limit_error)
 def fetch_top_referrers(repo):
-    # Top referring sites
     return repo.get_top_referrers()
 
 

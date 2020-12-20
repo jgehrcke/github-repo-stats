@@ -52,6 +52,8 @@ GHRS_OUTDIR="newdata"
 echo "change to /rundir"
 cd /rundir
 mkdir "${GHRS_OUTDIR}"
+
+echo "Fetch new data"
 python /fetch.py "${REPOSPEC}" --output-directory=${GHRS_OUTDIR}
 FETCH_ECODE=$?
 if [ $FETCH_ECODE -ne 0 ]; then
@@ -63,6 +65,11 @@ echo "fetch.py returned with exit code 0. proceed."
 
 echo "tree in $(pwd):"
 tree
+
+
+# Brief sleep as a workaround for having non-interleaving output of `tree` and
+# `gcloud auth`.
+sleep 1
 
 # Do not use `-d/--delete` so that remote data is not deleted. Plan with a flat
 # file hierarchy / set of files in GHRS_OUTDIR, i.e. do not use `-r`. Sync the

@@ -16,35 +16,35 @@ REPOSPEC="${GITHUB_REPOSITORY}"
 # For now: hard-code
 REPOSPEC="jgehrcke/covid-19-germany-gae"
 
+if [[ ! $GHRSGCS_BUCKET_NAME ]]; then
+    echo "error: the env var GHRS_GCS_BUCKET_NAME appears to be empty or not set"
+    exit 1
+fi
 
-# TODO: inject bucket name dynamically
-# GCS_BUCKET_NAME="${GHRS_GCS_BUCKET_NAME}"
-# For now: hard-code my bucket
-GCS_BUCKET_NAME="gh-repo-stats-jgehrcke"
 
 # Construct 'absolute path' to 'directory' in bucket where individual
 # fragment/snapshopt files will be stored to. The list of objects in this
 # 'directory' may grow large but certainly manageable. Note: `${REPOSPEC/\//_}`
 # replaces the slash in the repo spec with an underscore. Pieces of
 # information: bucket name, 'github-repostats', repo owner/org and repo name.
-GCS_DIRECTORY_ABSPATH="${GCS_BUCKET_NAME}/github-repo-stats_${REPOSPEC/\//_}"
+GCS_DIRECTORY_ABSPATH="${GHRS_GCS_BUCKET_NAME}/github-repo-stats_${REPOSPEC/\//_}"
 
 
 # Do a bit of validation.
-if [[ $(echo "$GCS_SVC_ACC_JSON" | wc -l ) -lt 3 ]]; then
-    echo "error: env var GCS_SVC_ACC_JSON has less than 3 lines of text"
+if [[ $(echo "$GHRS_GCS_SVC_ACC_JSON" | wc -l ) -lt 3 ]]; then
+    echo "error: env var GHRS_GCS_SVC_ACC_JSON has less than 3 lines of text"
     exit 1
 fi
-if jq -e . >/dev/null 2>&1 <<< "$GCS_SVC_ACC_JSON"; then
-    echo "env var GCS_SVC_ACC_JSON: looks like valid JSON"
+if jq -e . >/dev/null 2>&1 <<< "$GHRS_GCS_SVC_ACC_JSON"; then
+    echo "env var GHRS_GCS_SVC_ACC_JSON: looks like valid JSON"
 else
-    echo "error: env var GCS_SVC_ACC_JSON: failed to parse JSON"
+    echo "error: env var GHRS_GCS_SVC_ACC_JSON: failed to parse JSON"
     exit 1
 fi
 
 # Assume ephemeral container file system, store this at the root.
 GCP_CREDENTIAL_FILE="/gcs_svc_acc.json"
-echo "$GCS_SVC_ACC_JSON" > ${GCP_CREDENTIAL_FILE}
+echo "$GHRS_GCS_SVC_ACC_JSON" > ${GCP_CREDENTIAL_FILE}
 chmod 600 ${GCP_CREDENTIAL_FILE}
 
 GHRS_OUTDIR="newdata"

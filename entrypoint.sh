@@ -5,8 +5,21 @@
 echo "GHRS entrypoint.sh: pwd: $(pwd)"
 
 # Arguments in GH actions will be passed/defined via the action.yaml file.
+
 # Default to GITHUB_REPOSITORY.
+REPOSPEC="${GITHUB_REPOSITORY}"
+
+# TODO: can be overridden to use a repository _different_ from where the
+# workflow is being executed.
+#REPOSPEC="${GHRS_REPO_SPEC}"
+
+# For now: hard-code
 REPOSPEC="jgehrcke/covid-19-germany-gae"
+
+
+# TODO: inject bucket name dynamically
+# GCS_BUCKET_NAME="${GHRS_GCS_BUCKET_NAME}"
+# For now: hard-code my bucket
 GCS_BUCKET_NAME="gh-repo-stats-jgehrcke"
 
 # Construct 'absolute path' to 'directory' in bucket where individual
@@ -35,9 +48,20 @@ echo "$GCS_SVC_ACC_JSON" > ${GCP_CREDENTIAL_FILE}
 chmod 600 ${GCP_CREDENTIAL_FILE}
 
 GHRS_OUTDIR="newdata"
-mkdir newdata
-python ../fetch.py "${REPOSPEC}" --output-directory=${GHRS_OUTDIR}
-echo "dir/file tree in $(pwd):"
+# The container
+echo "change to /rundir"
+cd /rundir
+mkdir "${GHRS_OUTDIR}"
+python /fetch.py "${REPOSPEC}" --output-directory=${GHRS_OUTDIR}
+FETCH_ECODE=$?
+if [ $FETCH_ECODE -ne 0 ]; then
+    echo "error: fetch.py returned with code ${FETCH_ECODE} -- exit."
+    exit $FETCH_ECODE
+fi
+
+echo "fetch.py returned with exit code 0. proceed."
+
+echo "tree in $(pwd):"
 tree
 
 # Do not use `-d/--delete` so that remote data is not deleted. Plan with a flat
@@ -45,7 +69,7 @@ tree
 # contents of GHRS_OUTDIR to the storage bucket.
 set -x
 gcloud auth activate-service-account --key-file ${GCP_CREDENTIAL_FILE}
-gsutil rsync newdata "gs://$GCS_DIRECTORY_ABSPATH"
+gsutil rsync "${GHRS_OUTDIR}" "gs://$GCS_DIRECTORY_ABSPATH"
 set +x
 
 # "At the end of every upload, the gsutil rsync command validates that the

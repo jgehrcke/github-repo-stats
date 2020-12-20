@@ -1,0 +1,6 @@
+# action.yml
+name: "github-repo-stats"
+description: "github-repo-stats"
+runs:
+  using: "docker"
+  image: "Dockerfile"

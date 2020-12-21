@@ -25,7 +25,7 @@ RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2
     ./aws/install && \
     rm awscliv2.zip
 
-RUN pip install pandas matplotlib PyGitHub pytz retrying
+RUN pip install pandas==1.1.5 PyGitHub==1.54 pytz retrying
 
 COPY fetch.py /fetch.py
 COPY entrypoint.sh /entrypoint.sh

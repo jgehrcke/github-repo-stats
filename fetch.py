@@ -119,6 +119,7 @@ def fetch_all_traffic_api_endpoints(repo):
     else:
         log.info("indices of df_views and df_clones are equal")
 
+    log.info("union-merge views and clones")
     # https://pandas.pydata.org/pandas-docs/stable/user_guide/merging.html#set-logic-on-the-other-axes
     # Build union of the two data frames. Zero information loss, in case the
     # two indices aree different.

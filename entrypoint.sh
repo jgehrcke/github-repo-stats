@@ -54,8 +54,11 @@ cd /rundir
 mkdir "${GHRS_OUTDIR}"
 
 echo "Fetch new data"
+set -x
 python /fetch.py "${REPOSPEC}" --output-directory=${GHRS_OUTDIR}
 FETCH_ECODE=$?
+set +x
+
 if [ $FETCH_ECODE -ne 0 ]; then
     echo "error: fetch.py returned with code ${FETCH_ECODE} -- exit."
     exit $FETCH_ECODE
@@ -77,7 +80,14 @@ sleep 1
 set -x
 gcloud auth activate-service-account --key-file ${GCP_CREDENTIAL_FILE}
 gsutil rsync "${GHRS_OUTDIR}" "gs://$GCS_DIRECTORY_ABSPATH"
+SYNC_ECODE=$?
 set +x
+
+if [ $SYNC_ECODE -ne 0 ]; then
+    echo "error: gsutil returned with code ${SYNC_ECODE} -- exit."
+    exit $SYNC_ECODE
+fi
+
 
 # "At the end of every upload, the gsutil rsync command validates that the
 # checksum of the source file/object matches the checksum of the destination
@@ -85,3 +95,5 @@ set +x
 # copy and print a warning message." and "The rsync command will retry when
 # failures occur, but if enough failures happen during a particular copy or
 # delete operation the command will fail."
+
+echo "finished"

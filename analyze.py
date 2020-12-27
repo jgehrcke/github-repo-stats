@@ -200,6 +200,8 @@ def main():
     # chart.show()
     # chart_clones_total.save("chart.html")
 
+    chart_spec = chart_views_unique.to_json(indent=None)
+
     now_text = NOW.strftime("%Y-%m-%d %H:%M UTC")
     markdownreport = StringIO()
     markdownreport.write(
@@ -215,18 +217,21 @@ def main():
         ).strip()
     )
 
-    markdownreport.write(textwrap.dedent(
-    """
+    markdownreport.write(
+        textwrap.dedent(
+            f"""
 
 
     # Views
 
+    <div id="vis1"></div>
+    <script type="text/javascript">
+    vegaEmbed('#vis1', {chart_spec}).catch(console.error);
+    </script>
 
-    """))
-
-
-        spec1=chart1.to_json(indent=None),
-        spec2=chart2.to_json(indent=None),
+    """
+        )
+    )
 
     report_md_text = markdownreport.getvalue()
     md_report_filepath = os.path.join(OUTDIR, TODAY + "_report.md")
@@ -241,6 +246,9 @@ def main():
     log.info("Trying to run Pandoc for generating HTML document")
     pandoc_cmd = [
         args.pandoc_command,
+        # For allowing raw HTML in Markdown, ref
+        # https://stackoverflow.com/a/39229302/145400.
+        "--from=markdown_strict",
         "--toc",
         "--standalone",
         "--template=resources/template.html",

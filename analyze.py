@@ -161,7 +161,13 @@ def main():
             .encode(
                 alt.X("time", type="temporal", title="date"),
                 alt.Y(
-                    "clones_unique", type="quantitative", title="unique clones per day"
+                    "clones_unique",
+                    type="quantitative",
+                    title="unique clones per day",
+                    scale=alt.Scale(
+                        domain=(0, df_agg_clones["clones_unique"].max() * 1.1),
+                        zero=True,
+                    ),
                 ),
             )
         )
@@ -176,7 +182,13 @@ def main():
             .encode(
                 alt.X("time", type="temporal", title="date"),
                 alt.Y(
-                    "clones_total", type="quantitative", title="total clones per day"
+                    "clones_total",
+                    type="quantitative",
+                    title="total clones per day",
+                    scale=alt.Scale(
+                        domain=(0, df_agg_clones["clones_total"].max() * 1.1),
+                        zero=True,
+                    ),
                 ),
             )
         )
@@ -191,7 +203,13 @@ def main():
             .encode(
                 alt.X("time", type="temporal", title="date"),
                 alt.Y(
-                    "views_unique", type="quantitative", title="unique views per day"
+                    "views_unique",
+                    type="quantitative",
+                    title="unique views per day",
+                    scale=alt.Scale(
+                        domain=(0, df_agg_views["views_unique"].max() * 1.1),
+                        zero=True,
+                    ),
                 ),
             )
         )
@@ -205,7 +223,15 @@ def main():
             .mark_line(point=True)
             .encode(
                 alt.X("time", type="temporal", title="date"),
-                alt.Y("views_total", type="quantitative", title="total views per day"),
+                alt.Y(
+                    "views_total",
+                    type="quantitative",
+                    title="total views per day",
+                    scale=alt.Scale(
+                        domain=(0, df_agg_views["views_total"].max() * 1.1),
+                        zero=True,
+                    ),
+                ),
             )
         )
         .configure_axisY(labelBound=True)

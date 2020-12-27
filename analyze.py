@@ -144,7 +144,10 @@ def main():
     ## .mark_area(color="lightblue", interpolate="step-after", line=True)
     # pip carbonplan[styles]
 
-    ##
+    alt.themes.enable("carbonplan_light")
+    # https://github.com/altair-viz/altair/issues/673#issuecomment-566567828
+    alt.renderers.set_embed_options(actions=False)
+
     PANEL_WIDTH = 350
     # PANEL_WIDTH = "container"
     chart_clones_unique = (
@@ -206,6 +209,9 @@ def main():
     chart_clones_unique_spec = chart_clones_unique.to_json(indent=None)
     chart_clones_total_spec = chart_clones_total.to_json(indent=None)
 
+    # https://github.com/vega/vega-embed#options
+    vega_embed_opts_json = json.dumps({"actions": False})
+
     now_text = NOW.strftime("%Y-%m-%d %H:%M UTC")
     markdownreport = StringIO()
     markdownreport.write(
@@ -235,10 +241,10 @@ def main():
 
 
     <script type="text/javascript">
-    vegaEmbed('#chart_views_unique', {chart_views_unique_spec}).catch(console.error);
-    vegaEmbed('#chart_views_total', {chart_views_total_spec}).catch(console.error);
-    vegaEmbed('#chart_clones_unique', {chart_clones_unique_spec}).catch(console.error);
-    vegaEmbed('#chart_clones_total', {chart_clones_total_spec}).catch(console.error);
+    vegaEmbed('#chart_views_unique', {chart_views_unique_spec}, {vega_embed_opts_json}).catch(console.error);
+    vegaEmbed('#chart_views_total', {chart_views_total_spec}, {vega_embed_opts_json}).catch(console.error);
+    vegaEmbed('#chart_clones_unique', {chart_clones_unique_spec}, {vega_embed_opts_json}).catch(console.error);
+    vegaEmbed('#chart_clones_total', {chart_clones_total_spec}, {vega_embed_opts_json}).catch(console.error);
     </script>
 
     """

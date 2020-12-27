@@ -150,41 +150,43 @@ def main():
 
     PANEL_WIDTH = 350
     # PANEL_WIDTH = "container"
+    PANEL_HEIGHT = 250
+
     chart_clones_unique = (
         alt.Chart(df_agg_clones)
         .mark_line(point=True)
         .encode(
-            alt.X("time", type="temporal"),
+            alt.X("time", type="temporal", title="date"),
             alt.Y("clones_unique", type="quantitative", title="unique clones per day"),
         )
-    ).properties(height=200, width=PANEL_WIDTH)
+    ).properties(height=PANEL_HEIGHT, width=PANEL_WIDTH)
 
     chart_clones_total = (
         alt.Chart(df_agg_clones)
         .mark_line(point=True)
         .encode(
-            alt.X("time", type="temporal"),
+            alt.X("time", type="temporal", title="date"),
             alt.Y("clones_total", type="quantitative", title="total clones per day"),
         )
-    ).properties(height=200, width=PANEL_WIDTH)
+    ).properties(height=PANEL_HEIGHT, width=PANEL_WIDTH)
 
     chart_views_unique = (
         alt.Chart(df_agg_views)
         .mark_line(point=True)
         .encode(
-            alt.X("time", type="temporal"),
+            alt.X("time", type="temporal", title="date"),
             alt.Y("views_unique", type="quantitative", title="unique views per day"),
         )
-    ).properties(height=200, width=PANEL_WIDTH)
+    ).properties(height=PANEL_HEIGHT, width=PANEL_WIDTH)
 
     chart_views_total = (
         alt.Chart(df_agg_views)
         .mark_line(point=True)
         .encode(
-            alt.X("time", type="temporal"),
+            alt.X("time", type="temporal", title="date"),
             alt.Y("views_total", type="quantitative", title="total views per day"),
         )
-    ).properties(height=200, width=PANEL_WIDTH)
+    ).properties(height=PANEL_HEIGHT, width=PANEL_WIDTH)
 
     # alt.vconcat(
     #     alt.hconcat(chart_clones_unique, chart_clones_total),
@@ -210,7 +212,7 @@ def main():
     chart_clones_total_spec = chart_clones_total.to_json(indent=None)
 
     # https://github.com/vega/vega-embed#options
-    vega_embed_opts_json = json.dumps({"actions": False})
+    vega_embed_opts_json = json.dumps({"actions": False, "renderer": "svg"})
 
     now_text = NOW.strftime("%Y-%m-%d %H:%M UTC")
     markdownreport = StringIO()
@@ -236,6 +238,7 @@ def main():
 
 
     ## Clones
+
     <div id="chart_clones_unique"></div>
     <div id="chart_clones_total"></div>
 

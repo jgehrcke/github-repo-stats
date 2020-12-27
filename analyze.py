@@ -172,6 +172,7 @@ def main():
             )
         )
         .configure_axisY(labelBound=True)
+        .configure_point(size=100)
         .properties(**panel_props)
     )
 
@@ -193,6 +194,7 @@ def main():
             )
         )
         .configure_axisY(labelBound=True)
+        .configure_point(size=100)
         .properties(**panel_props)
     )
 
@@ -214,6 +216,7 @@ def main():
             )
         )
         .configure_axisY(labelBound=True)
+        .configure_point(size=100)
         .properties(**panel_props)
     )
 
@@ -235,6 +238,7 @@ def main():
             )
         )
         .configure_axisY(labelBound=True)
+        .configure_point(size=100)
         .properties(**panel_props)
     )
 

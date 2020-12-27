@@ -18,6 +18,7 @@ import logging
 import os
 import textwrap
 import json
+import glob
 import subprocess
 import shutil
 import sys
@@ -54,15 +55,100 @@ TODAY = NOW.strftime("%Y-%m-%d")
 OUTDIR = None
 
 
+def analyse_referrer_snapshots(args):
+    log.info("read referrer snapshots (CSV docs)")
+    referrer_csvpaths = glob.glob(
+        os.path.join(args.csvdir, "*_top_referrers_snapshot.csv")
+    )
+    log.info(
+        "number of CSV files discovered for *_top_referrers_snapshot.csv %s",
+        len(referrer_csvpaths),
+    )
+    dfs = []
+    column_names_seen = set()
+    for p in referrer_csvpaths:
+        log.info("attempt to parse %s", p)
+        # Expect each filename (basename) to have a prefix of format
+        # %Y-%m-%d_%H%M%S encoding the snapshot time (in UTC).
+        pprefix = os.path.basename(p).split("_top_referrers_snapshot.csv")[0]
+        snapshot_time = pytz.timezone("UTC").localize(
+            datetime.strptime(pprefix, "%Y-%m-%d_%H%M%S")
+        )
+        log.info("parsed timestamp from path: %s", snapshot_time)
+
+        df = pd.read_csv(p)
+        # Oversight. Maybe fix in CSVs?
+        df.rename(columns={"referrers": "referrer"}, inplace=True)
+
+        if column_names_seen and set(df.columns) != column_names_seen:
+            log.error("columns seen so far: %s", column_names_seen)
+            log.error("columns in %s: %s", p, df.columns)
+            sys.exit(1)
+
+        # attach snapshot time as meta data prop to df
+        df.attrs["snapshot_time"] = snapshot_time
+
+        column_names_seen.update(df.columns)
+        dfs.append(df)
+
+    for df in dfs:
+        print(df)
+
+    referrers = set()
+    for df in dfs:
+        referrers.update(df["referrer"].values)
+
+    log.info("all referrers seen: %s", referrers)
+
+    # Add bew column to each dataframe: `time`, with the same value for every
+    # row: the snapshot time.
+    for df in dfs:
+        df["time"] = df.attrs["snapshot_time"]
+
+    dfa = pd.concat(dfs)
+    referrer_dfs = {}
+    for referrer in referrers:
+        log.info("create dataframe for referrer: %s", referrer)
+        # Do a subselection
+        rdf = dfa[dfa["referrer"] == referrer]
+        # Now use datetime column as index
+        rdf.index = rdf["time"]
+        rdf.drop(columns=["time"])
+        rdf = rdf.sort_index()
+        print(rdf)
+        referrer_dfs[referrer] = rdf
+
+    # for df in dfs:
+    #     print(df)
+
+    # # dfat = dfa.transpose()
+    # # dfx = dfa.groupby("referrers").cumcount()
+    # dfa["refindex"] = dfa.groupby("referrers").cumcount()
+    # dfa.set_index("refindex", append=True)
+    # print(dfa)
+
+    # # Build the set of all top referrers seen.
+    # # eferrer_dfs = {}
+
+    sys.exit(0)
+
+
 def main():
 
     args = parse_args()
+
+    analyse_referrer_snapshots(args)
+
     log.info("read views/clones time series fragments (CSV docs)")
-    log.info("number of csv files provided: %s", len(args.csvpath))
+    views_clones_csvpaths = glob.glob(os.path.join(args.csvdir, "*views_clones*.csv"))
+    log.info(
+        "number of CSV files discovered for views/clones: %s",
+        len(views_clones_csvpaths),
+    )
 
     dfs = []
     column_names_seen = set()
-    for p in args.csvpath:
+    for p in views_clones_csvpaths:
         log.info("attempt to parse %s", p)
 
         df = pd.read_csv(
@@ -148,7 +234,7 @@ def main():
     # https://github.com/altair-viz/altair/issues/673#issuecomment-566567828
     alt.renderers.set_embed_options(actions=False)
 
-    PANEL_WIDTH = 370
+    PANEL_WIDTH = 360
     # PANEL_WIDTH = "container"
     PANEL_HEIGHT = 250
 
@@ -345,7 +431,9 @@ def parse_args():
     global OUTDIR
     parser = argparse.ArgumentParser(description="")
     parser.add_argument("repospec", help="repo owner/name")
-    parser.add_argument("csvpath", nargs="+")
+    parser.add_argument(
+        "csvdir", metavar="PATH", help="path to directory containing CSV files"
+    )
     parser.add_argument("--pandoc-command", default="pandoc")
     parser.add_argument("--resources-directory", default="resources")
     parser.add_argument("--output-directory", default=TODAY + "_report")

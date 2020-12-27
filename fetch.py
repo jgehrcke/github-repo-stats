@@ -17,13 +17,9 @@ import argparse
 import logging
 import os
 import json
-import pickle
-import concurrent.futures
-import shutil
 from datetime import datetime
 
 import sys
-
 
 import pandas as pd
 from github import Github

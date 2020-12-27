@@ -207,12 +207,9 @@ def main():
     markdownreport.write(
         textwrap.dedent(
             f"""
-    % Repository statistics
-    %
-    % {now_text}
-    The report is generated based on GitHub traffic data for the foo/bar repository.
-    The code for generating this report lives in
-    [`github-repo-stats`](https://github.com/jgehrcke/github-repo-stats).
+    % Statistics for {args.repospec}
+    % Generated with [jgehrcke/github-repo-stats](https://github.com/jgehrcke/github-repo-stats) at {now_text}.
+
     """
         ).strip()
     )
@@ -267,6 +264,7 @@ def main():
 def parse_args():
     global OUTDIR
     parser = argparse.ArgumentParser(description="")
+    parser.add_argument("repospec", help="repo owner/name")
     parser.add_argument("csvpath", nargs="+")
     parser.add_argument("--pandoc-command", default="pandoc")
     parser.add_argument("--resources-directory", default="resources")

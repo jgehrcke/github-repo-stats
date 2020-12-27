@@ -148,45 +148,71 @@ def main():
     # https://github.com/altair-viz/altair/issues/673#issuecomment-566567828
     alt.renderers.set_embed_options(actions=False)
 
-    PANEL_WIDTH = 350
+    PANEL_WIDTH = 370
     # PANEL_WIDTH = "container"
     PANEL_HEIGHT = 250
 
+    panel_props = {"height": PANEL_HEIGHT, "width": PANEL_WIDTH, "padding": 10}
+
     chart_clones_unique = (
-        alt.Chart(df_agg_clones)
-        .mark_line(point=True)
-        .encode(
-            alt.X("time", type="temporal", title="date"),
-            alt.Y("clones_unique", type="quantitative", title="unique clones per day"),
+        (
+            alt.Chart(df_agg_clones)
+            .mark_line(point=True)
+            .encode(
+                alt.X("time", type="temporal", title="date"),
+                alt.Y(
+                    "clones_unique", type="quantitative", title="unique clones per day"
+                ),
+            )
         )
-    ).properties(height=PANEL_HEIGHT, width=PANEL_WIDTH)
+        .configure_axisY(labelBound=True)
+        .properties(**panel_props)
+    )
 
     chart_clones_total = (
-        alt.Chart(df_agg_clones)
-        .mark_line(point=True)
-        .encode(
-            alt.X("time", type="temporal", title="date"),
-            alt.Y("clones_total", type="quantitative", title="total clones per day"),
+        (
+            alt.Chart(df_agg_clones)
+            .mark_line(point=True)
+            .encode(
+                alt.X("time", type="temporal", title="date"),
+                alt.Y(
+                    "clones_total", type="quantitative", title="total clones per day"
+                ),
+            )
         )
-    ).properties(height=PANEL_HEIGHT, width=PANEL_WIDTH)
+        .configure_axisY(labelBound=True)
+        .properties(**panel_props)
+    )
 
     chart_views_unique = (
-        alt.Chart(df_agg_views)
-        .mark_line(point=True)
-        .encode(
-            alt.X("time", type="temporal", title="date"),
-            alt.Y("views_unique", type="quantitative", title="unique views per day"),
+        (
+            alt.Chart(df_agg_views)
+            .mark_line(point=True)
+            .encode(
+                alt.X("time", type="temporal", title="date"),
+                alt.Y(
+                    "views_unique", type="quantitative", title="unique views per day"
+                ),
+            )
         )
-    ).properties(height=PANEL_HEIGHT, width=PANEL_WIDTH)
+        .configure_axisY(labelBound=True)
+        .properties(**panel_props)
+    )
 
     chart_views_total = (
-        alt.Chart(df_agg_views)
-        .mark_line(point=True)
-        .encode(
-            alt.X("time", type="temporal", title="date"),
-            alt.Y("views_total", type="quantitative", title="total views per day"),
+        (
+            alt.Chart(df_agg_views)
+            .mark_line(point=True)
+            .encode(
+                alt.X("time", type="temporal", title="date"),
+                alt.Y("views_total", type="quantitative", title="total views per day"),
+            )
         )
-    ).properties(height=PANEL_HEIGHT, width=PANEL_WIDTH)
+        .configure_axisY(labelBound=True)
+        .properties(**panel_props)
+    )
+
+    # chart_views_unique.configure_axisY(labelFlush=True, labelFlushOffset=100)
 
     # alt.vconcat(
     #     alt.hconcat(chart_clones_unique, chart_clones_total),

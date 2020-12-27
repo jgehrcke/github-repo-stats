@@ -7,3 +7,19 @@ https://docs.aws.amazon.com/cli/latest/reference/s3/sync.html
 Use https://github.com/arzzen/git-quick-stats
 
 Switch to using https://github.com/jd/tenacity
+
+Note here when done:
+https://stackoverflow.com/questions/12850864/is-it-possible-to-track-views-and-clones-of-my-github-repositories
+
+
+The HTML view shows detail about referrers
+graphs/traffic?referrer=govdata.de
+Note sure if this can be seen from the API. Tried things.
+Can scrape!
+
+
+https://discuss.newrelic.com/t/lambda-function-to-send-your-github-traffic-statistics-to-new-relic-insights/104121
+
+Maybe do something like
+https://pypi.org/project/github-traffic-stats
+but focus on GH actions first

@@ -17,10 +17,14 @@ REPOSPEC="${GITHUB_REPOSITORY}"
 REPOSPEC="jgehrcke/covid-19-germany-gae"
 
 if [[ ! $GHRS_GCS_BUCKET_NAME ]]; then
-    echo "error: the env var GHRS_GCS_BUCKET_NAME appears to be empty or not set"
+    echo "bad env: GHRS_GCS_BUCKET_NAME appears to be empty or not set"
     exit 1
 fi
 
+if [[ ! $GHRS_GITHUB_API_TOKEN ]]; then
+    echo "bad env: GHRS_GITHUB_API_TOKEN appears to be empty or not set"
+    exit 1
+fi
 
 # Construct 'absolute path' to 'directory' in bucket where individual
 # fragment/snapshopt files will be stored to. The list of objects in this

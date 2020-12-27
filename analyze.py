@@ -146,6 +146,7 @@ def main():
 
     ##
     PANEL_WIDTH = 350
+    # PANEL_WIDTH = "container"
     chart_clones_unique = (
         alt.Chart(df_agg_clones)
         .mark_line(point=True)
@@ -187,20 +188,23 @@ def main():
     #     alt.hconcat(chart_views_unique, chart_views_total),
     # ).resolve_scale(x="shared").save("chart.html")
 
-    alt.hconcat(
-        alt.vconcat(chart_clones_unique, chart_clones_total)
-        .resolve_scale(x="shared")
-        .properties(title="Clones"),
-        alt.vconcat(chart_views_unique, chart_views_total)
-        .resolve_scale(x="shared")
-        .properties(title="Views"),
-    ).save("chart.html", embed_options={"renderer": "svg"})
+    # alt.hconcat(
+    #     alt.vconcat(chart_clones_unique, chart_clones_total)
+    #     .resolve_scale(x="shared")
+    #     .properties(title="Clones"),
+    #     alt.vconcat(chart_views_unique, chart_views_total)
+    #     .resolve_scale(x="shared")
+    #     .properties(title="Views"),
+    # ).save("chart.html", embed_options={"renderer": "svg"})
 
     # https://github.com/altair-viz/altair/issues/1422#issuecomment-525866028
     # chart.show()
     # chart_clones_total.save("chart.html")
 
-    chart_spec = chart_views_unique.to_json(indent=None)
+    chart_views_unique_spec = chart_views_unique.to_json(indent=None)
+    chart_views_total_spec = chart_views_total.to_json(indent=None)
+    chart_clones_unique_spec = chart_clones_unique.to_json(indent=None)
+    chart_clones_total_spec = chart_clones_total.to_json(indent=None)
 
     now_text = NOW.strftime("%Y-%m-%d %H:%M UTC")
     markdownreport = StringIO()
@@ -219,11 +223,22 @@ def main():
             f"""
 
 
-    # Views
+    ## Views
 
-    <div id="vis1"></div>
+    <div id="chart_views_unique"></div>
+    <div id="chart_views_total"></div>
+
+
+    ## Clones
+    <div id="chart_clones_unique"></div>
+    <div id="chart_clones_total"></div>
+
+
     <script type="text/javascript">
-    vegaEmbed('#vis1', {chart_spec}).catch(console.error);
+    vegaEmbed('#chart_views_unique', {chart_views_unique_spec}).catch(console.error);
+    vegaEmbed('#chart_views_total', {chart_views_total_spec}).catch(console.error);
+    vegaEmbed('#chart_clones_unique', {chart_clones_unique_spec}).catch(console.error);
+    vegaEmbed('#chart_clones_total', {chart_clones_total_spec}).catch(console.error);
     </script>
 
     """
@@ -245,8 +260,8 @@ def main():
         args.pandoc_command,
         # For allowing raw HTML in Markdown, ref
         # https://stackoverflow.com/a/39229302/145400.
-        "--from=markdown_strict",
-        "--toc",
+        "--from=markdown_strict+pandoc_title_block",
+        # "--toc",
         "--standalone",
         "--template=resources/template.html",
         md_report_filepath,

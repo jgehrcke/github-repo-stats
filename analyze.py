@@ -54,6 +54,61 @@ NOW = datetime.utcnow()
 TODAY = NOW.strftime("%Y-%m-%d")
 OUTDIR = None
 
+# Individual code sections are supposed to add to this in-memory Markdown
+# document as they desire.
+MD_REPORT = StringIO()
+
+
+def main():
+
+    args = parse_args()
+    write_report_preamble(args)
+    analyse_view_clones_ts_fragments(args)
+    analyse_referrer_snapshots(args)
+
+    md_report_filepath = os.path.join(OUTDIR, TODAY + "_report.md")
+    log.info("Write generated Markdown report to: %s", md_report_filepath)
+    with open(md_report_filepath, "wb") as f:
+        f.write(MD_REPORT.getvalue().encode("utf-8"))
+
+    log.info("Copy resources directory into output directory")
+    shutil.copytree(args.resources_directory, os.path.join(OUTDIR, "resources"))
+
+    html_report_filepath = os.path.splitext(md_report_filepath)[0] + ".html"
+    log.info("Trying to run Pandoc for generating HTML document")
+    pandoc_cmd = [
+        args.pandoc_command,
+        # For allowing raw HTML in Markdown, ref
+        # https://stackoverflow.com/a/39229302/145400.
+        "--from=markdown_strict+pandoc_title_block",
+        # "--toc",
+        "--standalone",
+        "--template=resources/template.html",
+        md_report_filepath,
+        "-o",
+        html_report_filepath,
+    ]
+
+    log.info("Running command: %s", " ".join(pandoc_cmd))
+    p = subprocess.run(pandoc_cmd)
+    if p.returncode == 0:
+        log.info("Pandoc terminated indicating success")
+    else:
+        log.info("Pandoc terminated indicating error")
+
+
+def write_report_preamble(args):
+    now_text = NOW.strftime("%Y-%m-%d %H:%M UTC")
+    MD_REPORT.write(
+        textwrap.dedent(
+            f"""
+    % Statistics for {args.repospec}
+    % Generated with [jgehrcke/github-repo-stats](https://github.com/jgehrcke/github-repo-stats) at {now_text}.
+
+    """
+        ).strip()
+    )
+
 
 def analyse_referrer_snapshots(args):
     log.info("read referrer snapshots (CSV docs)")
@@ -119,6 +174,9 @@ def analyse_referrer_snapshots(args):
         print(rdf)
         referrer_dfs[referrer] = rdf
 
+    # analyse_referrer_snapshots(args)
+    #
+
     # for df in dfs:
     #     print(df)
 
@@ -131,14 +189,8 @@ def analyse_referrer_snapshots(args):
     # # Build the set of all top referrers seen.
     # # eferrer_dfs = {}
 
-    sys.exit(0)
 
-
-def main():
-
-    args = parse_args()
-
-    analyse_referrer_snapshots(args)
+def analyse_view_clones_ts_fragments(args):
 
     log.info("read views/clones time series fragments (CSV docs)")
     views_clones_csvpaths = glob.glob(os.path.join(args.csvdir, "*views_clones*.csv"))
@@ -177,7 +229,7 @@ def main():
     # Rename index (now of type `pd.DatetimeIndex`)
     dfa.index.rename("time", inplace=True)
 
-    print(dfa)
+    # print(dfa)
 
     # drop_duplicates is too ignorant!
     # df_agg.drop_duplicates(inplace=True, keep="last")
@@ -191,7 +243,7 @@ def main():
     # `clones_total`. That is, for aggregation we have to look for the max data
     # values for any given timestamp.
     df_agg = dfa.groupby(dfa.index).max()
-    print(df_agg)
+    # print(df_agg)
 
     # matplotlib_config()
     # log.info("aggregated sample count: %s", len(df_agg))
@@ -204,33 +256,22 @@ def main():
     #     xlabel="",
     #     # logy="sym",
     # )
-
     # plt.ylim([0, None])
     # plt.tight_layout()
-
     # plt.show()
 
-    import altair as alt
-
-    # alt.Chart(df_agg).mark_bar().encode(
-    # x='x',
-    # y='y',
-    # )
-
-    # for reset_index() see
+    # Why reset_index()? See
     # https://github.com/altair-viz/altair/issues/271#issuecomment-573480284
     df_agg = df_agg.reset_index()
-
     df_agg_views = df_agg.drop(columns=["clones_unique", "clones_total"])
     df_agg_clones = df_agg.drop(columns=["views_unique", "views_total"])
 
     # for melt, see https://github.com/altair-viz/altair/issues/968
     # df_agg_views = df_agg.melt("time")
     # print(df_agg)
-
     ## .mark_area(color="lightblue", interpolate="step-after", line=True)
-    # pip carbonplan[styles]
 
+    # https://github.com/carbonplan/styles
     alt.themes.enable("carbonplan_light")
     # https://github.com/altair-viz/altair/issues/673#issuecomment-566567828
     alt.renderers.set_embed_options(actions=False)
@@ -357,19 +398,7 @@ def main():
     # https://github.com/vega/vega-embed#options
     vega_embed_opts_json = json.dumps({"actions": False, "renderer": "svg"})
 
-    now_text = NOW.strftime("%Y-%m-%d %H:%M UTC")
-    markdownreport = StringIO()
-    markdownreport.write(
-        textwrap.dedent(
-            f"""
-    % Statistics for {args.repospec}
-    % Generated with [jgehrcke/github-repo-stats](https://github.com/jgehrcke/github-repo-stats) at {now_text}.
-
-    """
-        ).strip()
-    )
-
-    markdownreport.write(
+    MD_REPORT.write(
         textwrap.dedent(
             f"""
 
@@ -396,36 +425,6 @@ def main():
     """
         )
     )
-
-    report_md_text = markdownreport.getvalue()
-    md_report_filepath = os.path.join(OUTDIR, TODAY + "_report.md")
-    log.info("Write generated Markdown report to: %s", md_report_filepath)
-    with open(md_report_filepath, "wb") as f:
-        f.write(report_md_text.encode("utf-8"))
-
-    log.info("Copy resources directory into output directory")
-    shutil.copytree(args.resources_directory, os.path.join(OUTDIR, "resources"))
-
-    html_report_filepath = os.path.splitext(md_report_filepath)[0] + ".html"
-    log.info("Trying to run Pandoc for generating HTML document")
-    pandoc_cmd = [
-        args.pandoc_command,
-        # For allowing raw HTML in Markdown, ref
-        # https://stackoverflow.com/a/39229302/145400.
-        "--from=markdown_strict+pandoc_title_block",
-        # "--toc",
-        "--standalone",
-        "--template=resources/template.html",
-        md_report_filepath,
-        "-o",
-        html_report_filepath,
-    ]
-    log.info("Running command: %s", " ".join(pandoc_cmd))
-    p = subprocess.run(pandoc_cmd)
-    if p.returncode == 0:
-        log.info("Pandoc terminated indicating success")
-    else:
-        log.info("Pandoc terminated indicating error")
 
 
 def parse_args():

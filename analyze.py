@@ -70,11 +70,19 @@ VEGA_EMBED_OPTIONS_JSON = json.dumps({"actions": False, "renderer": "canvas"})
 def main():
     args = parse_args()
     gen_report_preamble(args)
+    configure_altair()
     analyse_view_clones_ts_fragments(args)
     analyse_top_x_snapshots("referrer", args)
     analyse_top_x_snapshots("path", args)
     gen_report_footer()
     finalize_and_render_report(args)
+
+
+def configure_altair():
+    # https://github.com/carbonplan/styles
+    alt.themes.enable("carbonplan_light")
+    # https://github.com/altair-viz/altair/issues/673#issuecomment-566567828
+    alt.renderers.set_embed_options(actions=False)
 
 
 def gen_report_footer():
@@ -326,7 +334,7 @@ def analyse_top_x_snapshots(entity_type, args):
     # plot that this is a _mean_ value derived from the _last 14 days_.
     df_melted["views_unique_norm"] = df_melted["views_unique"] / 14.0
 
-    panel_props = {"height": 400, "width": "container", "padding": 10}
+    panel_props = {"height": 300, "width": "container", "padding": 10}
     chart = (
         alt.Chart(df_melted)
         .mark_line(point=True)
@@ -462,14 +470,9 @@ def analyse_view_clones_ts_fragments(args):
     # print(df_agg)
     ## .mark_area(color="lightblue", interpolate="step-after", line=True)
 
-    # https://github.com/carbonplan/styles
-    alt.themes.enable("carbonplan_light")
-    # https://github.com/altair-viz/altair/issues/673#issuecomment-566567828
-    alt.renderers.set_embed_options(actions=False)
-
-    PANEL_WIDTH = 360
-    # PANEL_WIDTH = "container"
-    PANEL_HEIGHT = 250
+    # PANEL_WIDTH = 360
+    PANEL_WIDTH = "container"
+    PANEL_HEIGHT = 200
 
     panel_props = {"height": PANEL_HEIGHT, "width": PANEL_WIDTH, "padding": 10}
 
@@ -593,14 +596,14 @@ def analyse_view_clones_ts_fragments(args):
 
     ## Views
 
-    <div id="chart_views_unique"></div>
-    <div id="chart_views_total"></div>
+    <div id="chart_views_unique" class="full-width-chart"></div>
+    <div id="chart_views_total" class="full-width-chart"></div>
 
 
     ## Clones
 
-    <div id="chart_clones_unique"></div>
-    <div id="chart_clones_total"></div>
+    <div id="chart_clones_unique" class="full-width-chart"></div>
+    <div id="chart_clones_total" class="full-width-chart"></div>
 
     """
         )

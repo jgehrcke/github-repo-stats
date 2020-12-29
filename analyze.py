@@ -128,8 +128,8 @@ def finalize_and_render_report(args):
         args.pandoc_command,
         # For allowing raw HTML in Markdown, ref
         # https://stackoverflow.com/a/39229302/145400.
-        "--from=markdown_strict+pandoc_title_block",
-        # "--toc",
+        "--from=markdown+pandoc_title_block+native_divs",
+        "--toc",
         "--standalone",
         "--template=resources/template.html",
         md_report_filepath,
@@ -596,13 +596,19 @@ def analyse_view_clones_ts_fragments(args):
 
     ## Views
 
+    #### Unique visitors
     <div id="chart_views_unique" class="full-width-chart"></div>
+
+    #### Total views
     <div id="chart_views_total" class="full-width-chart"></div>
 
 
     ## Clones
 
+    #### Unique cloners
     <div id="chart_clones_unique" class="full-width-chart"></div>
+
+    #### Total clones
     <div id="chart_clones_total" class="full-width-chart"></div>
 
     """

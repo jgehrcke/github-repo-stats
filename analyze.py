@@ -246,7 +246,79 @@ def analyse_referrer_snapshots(args):
         print(rdf)
         df_top_cu[rname] = rdf["count_unique"]
 
-    print(df_top_cu)
+    log.info(
+        "The top %s referrers based on unique views, for the entire time range seen:\n%s",
+        top_n,
+        df_top_cu,
+    )
+
+    # For plotting with Altair, reshape the data using pd.melt() to combine the
+    # multiple columns into one, where the referrer name is not a column label,
+    # but a value in a column. Ooor we could use the
+    # transform_fold() technique
+    # https://altair-viz.github.io/user_guide/data.html#converting-between-long-form-and-wide-form-pandas
+    # with .transform_fold(top_n_rnames, as_=["referrer", "count_unique"])
+    # Also copy index into a normal column via `reset_index()` for
+    # https://altair-viz.github.io/user_guide/data.html#including-index-data
+    df_melted = df_top_cu.melt(
+        var_name="referrer", value_name="count_unique", ignore_index=False
+    ).reset_index()
+    print(df_melted)
+
+    panel_props = {"height": 400, "width": "container", "padding": 10}
+
+    chart = (
+        alt.Chart(df_melted)
+        .mark_line(point=True)
+        # .encode(x="time:T", y="count_unique:Q", color="referrer:N")
+        .encode(
+            alt.X("time", type="temporal", title="date"),
+            alt.Y(
+                "count_unique",
+                type="quantitative",
+                title="unique views per day",
+                scale=alt.Scale(
+                    domain=(0, df_melted["count_unique"].max() * 1.1),
+                    zero=True,
+                ),
+            ),
+            alt.Color(
+                "referrer",
+                type="nominal",
+            ),
+        )
+        .configure_point(size=100)
+        .properties(**panel_props)
+    )
+
+    chart_spec = chart.to_json(indent=None)
+
+    # From
+    # https://altair-viz.github.io/user_guide/customization.html
+    # "Note that this will only scale with the container if its parent element
+    # has a size determined outside the chart itself; For example, the
+    # container may be a <div> element that has style width: 100%; height:
+    # 300px.""
+
+    MD_REPORT.write(
+        textwrap.dedent(
+            f"""
+
+    ## Referrers
+
+
+    <div style="width: 100%;">
+        <div id="chart_referrers_top_n_alltime"></div>
+    </div>
+
+    """
+        )
+    )
+    JS_FOOTER_LINES.append(
+        f"vegaEmbed('#chart_referrers_top_n_alltime', {chart_spec}, {VEGA_EMBED_OPTIONS_JSON}).catch(console.error);"
+    )
+
+    # .transform_fold(
 
     # analyse_referrer_snapshots(args)
     #

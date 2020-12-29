@@ -322,8 +322,11 @@ def analyse_top_x_snapshots(entity_type, args):
     ).reset_index()
     print(df_melted)
 
-    panel_props = {"height": 400, "width": "container", "padding": 10}
+    # Normalize main metric to show a view count _per day_, and clarify in the
+    # plot that this is a _mean_ value derived from the _last 14 days_.
+    df_melted["views_unique_norm"] = df_melted["views_unique"] / 14.0
 
+    panel_props = {"height": 400, "width": "container", "padding": 10}
     chart = (
         alt.Chart(df_melted)
         .mark_line(point=True)
@@ -331,11 +334,11 @@ def analyse_top_x_snapshots(entity_type, args):
         .encode(
             alt.X("time", type="temporal", title="date"),
             alt.Y(
-                "views_unique",
+                "views_unique_norm",
                 type="quantitative",
-                title="unique views per day",
+                title="unique visitors per day (mean from last 14 days)",
                 scale=alt.Scale(
-                    domain=(0, df_melted["views_unique"].max() * 1.1),
+                    domain=(0, df_melted["views_unique_norm"].max() * 1.1),
                     zero=True,
                 ),
             ),

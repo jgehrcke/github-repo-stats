@@ -112,8 +112,9 @@ def analyse_referrer_snapshots(args):
         # Do a subselection
         rdf = dfa[dfa["referrer"] == referrer]
         # Now use datetime column as index
-        rdf.index = rdf["time"]
-        rdf.drop(columns=["time"])
+        newindex = rdf["time"]
+        rdf = rdf.drop(columns=["time"])
+        rdf.index = newindex
         rdf = rdf.sort_index()
         print(rdf)
         referrer_dfs[referrer] = rdf

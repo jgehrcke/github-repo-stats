@@ -61,6 +61,10 @@ OUTDIR = None
 # Individual code sections are supposed to add to this in-memory Markdown
 # document as they desire.
 MD_REPORT = StringIO()
+JS_FOOTER_LINES = []
+
+# https://github.com/vega/vega-embed#options
+VEGA_EMBED_OPTIONS_JSON = json.dumps({"actions": False, "renderer": "canvas"})
 
 
 def main():
@@ -69,6 +73,8 @@ def main():
     write_report_preamble(args)
     analyse_view_clones_ts_fragments(args)
     analyse_referrer_snapshots(args)
+
+    write_report_footer()
 
     md_report_filepath = os.path.join(OUTDIR, TODAY + "_report.md")
     log.info("Write generated Markdown report to: %s", md_report_filepath)
@@ -99,6 +105,21 @@ def main():
         log.info("Pandoc terminated indicating success")
     else:
         log.info("Pandoc terminated indicating error")
+
+
+def write_report_footer():
+    js_footer = "\n".join(JS_FOOTER_LINES)
+    MD_REPORT.write(
+        textwrap.dedent(
+            f"""
+
+    <script type="text/javascript">
+    {js_footer}
+    </script>
+
+    """
+        ).strip()
+    )
 
 
 def write_report_preamble(args):
@@ -448,9 +469,6 @@ def analyse_view_clones_ts_fragments(args):
     chart_clones_unique_spec = chart_clones_unique.to_json(indent=None)
     chart_clones_total_spec = chart_clones_total.to_json(indent=None)
 
-    # https://github.com/vega/vega-embed#options
-    vega_embed_opts_json = json.dumps({"actions": False, "renderer": "svg"})
-
     MD_REPORT.write(
         textwrap.dedent(
             f"""
@@ -467,16 +485,16 @@ def analyse_view_clones_ts_fragments(args):
     <div id="chart_clones_unique"></div>
     <div id="chart_clones_total"></div>
 
-
-    <script type="text/javascript">
-    vegaEmbed('#chart_views_unique', {chart_views_unique_spec}, {vega_embed_opts_json}).catch(console.error);
-    vegaEmbed('#chart_views_total', {chart_views_total_spec}, {vega_embed_opts_json}).catch(console.error);
-    vegaEmbed('#chart_clones_unique', {chart_clones_unique_spec}, {vega_embed_opts_json}).catch(console.error);
-    vegaEmbed('#chart_clones_total', {chart_clones_total_spec}, {vega_embed_opts_json}).catch(console.error);
-    </script>
-
     """
         )
+    )
+    JS_FOOTER_LINES.extend(
+        [
+            f"vegaEmbed('#chart_views_unique', {chart_views_unique_spec}, {VEGA_EMBED_OPTIONS_JSON}).catch(console.error);",
+            f"vegaEmbed('#chart_views_total', {chart_views_total_spec}, {VEGA_EMBED_OPTIONS_JSON}).catch(console.error);",
+            f"vegaEmbed('#chart_clones_unique', {chart_clones_unique_spec}, {VEGA_EMBED_OPTIONS_JSON}).catch(console.error);",
+            f"vegaEmbed('#chart_clones_total', {chart_clones_total_spec}, {VEGA_EMBED_OPTIONS_JSON}).catch(console.error);",
+        ]
     )
 
 

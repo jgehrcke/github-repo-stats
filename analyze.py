@@ -308,9 +308,8 @@ def analyse_referrer_snapshots(args):
     ## Referrers
 
 
-    <div style="width: 100%;">
-        <div id="chart_referrers_top_n_alltime"></div>
-    </div>
+    <div id="chart_referrers_top_n_alltime" class="full-width-chart"></div>
+
 
     """
         )

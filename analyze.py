@@ -224,12 +224,12 @@ def analyse_top_x_snapshots(entity_type, args):
     # Keep in mind: an entity_type is either a top 'referrer', or a top 'path'.
     # Find all entities seen across snapshots, by their name. For type referrer
     # a specific entity(referrer) name might be `github.com`.
-    entity_names = set()
+    unique_entity_names = set()
     for df in snapshot_dfs:
-        entity_names.update(df[entity_type].values)
+        unique_entity_names.update(df[entity_type].values)
     del df
 
-    log.info("all %s entities seen: %s", entity_type, entity_names)
+    log.info("all %s entities seen: %s", entity_type, unique_entity_names)
 
     # Add bew column to each dataframe: `time`, with the same value for every
     # row: the snapshot time.
@@ -249,7 +249,7 @@ def analyse_top_x_snapshots(entity_type, args):
     # Build a dict: key is referrer name, and value is DF with corresponding
     # raw time series.
     entity_dfs = {}
-    for ename in entity_names:
+    for ename in unique_entity_names:
         log.info("create dataframe for %s: %s", entity_type, ename)
         # Do a subselection
         edf = dfa[dfa[entity_type] == ename]
@@ -333,6 +333,19 @@ def analyse_top_x_snapshots(entity_type, args):
     # Normalize main metric to show a view count _per day_, and clarify in the
     # plot that this is a _mean_ value derived from the _last 14 days_.
     df_melted["views_unique_norm"] = df_melted["views_unique"] / 14.0
+
+    # For paths, it's relevant to identify the common prefix (repo owner/name)
+
+    cmn_ename_prefix = os.path.commonprefix(list(unique_entity_names))
+    log.info("cmn_ename_prefix: %s", cmn_ename_prefix)
+
+    if entity_type == "path":
+        log.info("remove common path prefix")
+        df_melted["path"] = df_melted["path"].str.slice(start=len(cmn_ename_prefix))
+        # The root path (e.g., `owner/repo`) is not an empty string. That's
+        # not so cool, make the root be represented by a single slash.
+        # df_melted[df_melted["path"] == ""]["path"] = "/"
+        df_melted["path"].replace("", "/", inplace=True)
 
     panel_props = {"height": 300, "width": "container", "padding": 10}
     chart = (

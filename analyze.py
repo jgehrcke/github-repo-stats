@@ -286,6 +286,7 @@ def analyse_referrer_snapshots(args):
             alt.Color(
                 "referrer",
                 type="nominal",
+                sort=alt.SortField("order"),
             ),
         )
         .configure_point(size=100)

@@ -22,6 +22,8 @@ import glob
 import subprocess
 import shutil
 import sys
+
+# from collections import Counter,
 from datetime import datetime
 from io import StringIO
 
@@ -31,8 +33,10 @@ import requests
 import retrying
 import pytz
 
+import altair as alt
 import matplotlib
-from matplotlib import pyplot as plt
+
+# from matplotlib import pyplot as plt
 
 
 """
@@ -161,6 +165,9 @@ def analyse_referrer_snapshots(args):
         df["time"] = df.attrs["snapshot_time"]
 
     dfa = pd.concat(dfs)
+
+    # Build a dict: key is referrer name, and value is DF with corresponding
+    # raw time series.
     referrer_dfs = {}
     for referrer in referrers:
         log.info("create dataframe for referrer: %s", referrer)
@@ -173,6 +180,52 @@ def analyse_referrer_snapshots(args):
         rdf = rdf.sort_index()
         print(rdf)
         referrer_dfs[referrer] = rdf
+
+    # It's important to clarify what each data point in a per-referrer raw time
+    # series means. Each data point has been returned by the GitHub traffic
+    # API. Each sample (row in the df) I think it can/should be looked at as
+    # the result of a rolling window analysis that shows cumulative values
+    # summed up over a period of 14 days; noted at the _right edge_ of the
+    # rolling time window.
+
+    # Should see further verification, but I think the boundaries of the time
+    # window actually move with sub-day resolution, i.e. the same query
+    # performed within the same day may yield different outcomes. If that's
+    # true, the rolling time window analysis performed internally at GitHub can
+    # be perfectly inversed; yielding per-referrer traffic statistics at a
+    # sub-day time resolution. That of course will require predictable,
+    # periodic sampling. Let's keep that in mind for now.
+
+    # One interesting way to look at the data: find the top 5 referrers based
+    # on unique views, and for the entire time range seen.
+
+    ref_max_cu_map = {}
+    for rname, rdf in referrer_dfs.items():
+        ref_max_cu_map[rname] = rdf["count_unique"].max()
+
+    # Sort dict so that the first item is the referrer with the highest
+    # count_unique seen.
+    sorted_dict = {
+        k: v
+        for k, v in sorted(ref_max_cu_map.items(), key=lambda i: i[1], reverse=True)
+    }
+
+    top_n_rnames = list(sorted_dict.keys())[:3]
+
+    # simulate a case where there are different timestamps across per-referrer
+    # dfs: copy a 'row', and re-insert it with a different timestamp.
+    # row = referrer_dfs["t.co"].take([-1])
+    # print(row)
+    # referrer_dfs["t.co"].loc["2020-12-30 12:25:08+00:00"] = row.iloc[0]
+    # print(referrer_dfs["t.co"])
+
+    df_top_cu = pd.DataFrame()
+    for rname in top_n_rnames:
+        rdf = referrer_dfs[rname]
+        print(rdf)
+        df_top_cu[rname] = rdf["count_unique"]
+
+    print(df_top_cu)
 
     # analyse_referrer_snapshots(args)
     #

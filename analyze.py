@@ -231,7 +231,8 @@ def analyse_referrer_snapshots(args):
         for k, v in sorted(ref_max_cu_map.items(), key=lambda i: i[1], reverse=True)
     }
 
-    top_n_rnames = list(sorted_dict.keys())[:3]
+    top_n = 5
+    top_n_rnames = list(sorted_dict.keys())[:top_n]
 
     # simulate a case where there are different timestamps across per-referrer
     # dfs: copy a 'row', and re-insert it with a different timestamp.
@@ -319,6 +320,8 @@ def analyse_referrer_snapshots(args):
     )
 
     # .transform_fold(
+    # ['AAPL', 'AMZN', 'GOOG'],
+    # as_=['company', 'price']
 
     # analyse_referrer_snapshots(args)
     #

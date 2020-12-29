@@ -68,14 +68,44 @@ VEGA_EMBED_OPTIONS_JSON = json.dumps({"actions": False, "renderer": "canvas"})
 
 
 def main():
-
     args = parse_args()
-    write_report_preamble(args)
+    gen_report_preamble(args)
     analyse_view_clones_ts_fragments(args)
-    analyse_referrer_snapshots(args)
+    analyse_top_x_snapshots("referrer", args)
+    analyse_top_x_snapshots("path", args)
+    gen_report_footer()
+    finalize_and_render_report(args)
 
-    write_report_footer()
 
+def gen_report_footer():
+    js_footer = "\n".join(JS_FOOTER_LINES)
+    MD_REPORT.write(
+        textwrap.dedent(
+            f"""
+
+    <script type="text/javascript">
+    {js_footer}
+    </script>
+
+    """
+        ).strip()
+    )
+
+
+def gen_report_preamble(args):
+    now_text = NOW.strftime("%Y-%m-%d %H:%M UTC")
+    MD_REPORT.write(
+        textwrap.dedent(
+            f"""
+    % Statistics for {args.repospec}
+    % Generated with [jgehrcke/github-repo-stats](https://github.com/jgehrcke/github-repo-stats) at {now_text}.
+
+    """
+        ).strip()
+    )
+
+
+def finalize_and_render_report(args):
     md_report_filepath = os.path.join(OUTDIR, TODAY + "_report.md")
     log.info("Write generated Markdown report to: %s", md_report_filepath)
     with open(md_report_filepath, "wb") as f:
@@ -107,100 +137,124 @@ def main():
         log.info("Pandoc terminated indicating error")
 
 
-def write_report_footer():
-    js_footer = "\n".join(JS_FOOTER_LINES)
-    MD_REPORT.write(
-        textwrap.dedent(
-            f"""
+def top_x_snapshots_rename_columns(df):
+    # mutate in-place.
 
-    <script type="text/javascript">
-    {js_footer}
-    </script>
+    # As always, naming is hard. Names get clearer over time. Work with data
+    # files that have non-ideal names. Semantically, there is a column name
+    # oversight -- plural vs. singular. Maybe fix in CSVs? Either one of both
+    # renames or both renames are OK to fail.
+    try:
+        df.rename(columns={"referrers": "referrer"}, inplace=True)
+    except ValueError:
+        pass
 
-    """
-        ).strip()
-    )
+    try:
+        df.rename(columns={"url_paths": "path"}, inplace=True)
+    except ValueError:
+        pass
+
+    try:
+        df.rename(columns={"count_unique": "views_unique"}, inplace=True)
+    except ValueError:
+        pass
+
+    try:
+        df.rename(columns={"count_total": "views_total"}, inplace=True)
+    except ValueError:
+        pass
 
 
-def write_report_preamble(args):
-    now_text = NOW.strftime("%Y-%m-%d %H:%M UTC")
-    MD_REPORT.write(
-        textwrap.dedent(
-            f"""
-    % Statistics for {args.repospec}
-    % Generated with [jgehrcke/github-repo-stats](https://github.com/jgehrcke/github-repo-stats) at {now_text}.
+def analyse_top_x_snapshots(entity_type, args):
+    assert entity_type in ["referrer", "path"]
 
-    """
-        ).strip()
-    )
+    log.info("read 'top %s' snapshots (CSV docs)", entity_type)
 
-
-def analyse_referrer_snapshots(args):
-    log.info("read referrer snapshots (CSV docs)")
-    referrer_csvpaths = glob.glob(
-        os.path.join(args.csvdir, "*_top_referrers_snapshot.csv")
-    )
+    basename_suffix = f"_top_{entity_type}s_snapshot.csv"
+    basename_pattern = f"*{basename_suffix}"
+    csvpaths = glob.glob(os.path.join(args.csvdir, basename_pattern))
     log.info(
-        "number of CSV files discovered for *_top_referrers_snapshot.csv %s",
-        len(referrer_csvpaths),
+        "number of CSV files discovered for %s: %s",
+        basename_pattern,
+        len(csvpaths),
     )
-    dfs = []
+
+    snapshot_dfs = []
     column_names_seen = set()
-    for p in referrer_csvpaths:
+
+    for p in csvpaths:
         log.info("attempt to parse %s", p)
+
         # Expect each filename (basename) to have a prefix of format
         # %Y-%m-%d_%H%M%S encoding the snapshot time (in UTC).
-        pprefix = os.path.basename(p).split("_top_referrers_snapshot.csv")[0]
+        basename_prefix = os.path.basename(p).split(basename_suffix)[0]
+
         snapshot_time = pytz.timezone("UTC").localize(
-            datetime.strptime(pprefix, "%Y-%m-%d_%H%M%S")
+            datetime.strptime(basename_prefix, "%Y-%m-%d_%H%M%S")
         )
         log.info("parsed timestamp from path: %s", snapshot_time)
 
         df = pd.read_csv(p)
-        # Oversight. Maybe fix in CSVs?
-        df.rename(columns={"referrers": "referrer"}, inplace=True)
+        # mutate column names in-place.
+        top_x_snapshots_rename_columns(df)
 
         if column_names_seen and set(df.columns) != column_names_seen:
             log.error("columns seen so far: %s", column_names_seen)
             log.error("columns in %s: %s", p, df.columns)
+            log.error("inconsistent set of column names across CSV files")
             sys.exit(1)
 
         # attach snapshot time as meta data prop to df
         df.attrs["snapshot_time"] = snapshot_time
 
         column_names_seen.update(df.columns)
-        dfs.append(df)
+        snapshot_dfs.append(df)
 
-    for df in dfs:
+    for df in snapshot_dfs:
         print(df)
 
-    referrers = set()
-    for df in dfs:
-        referrers.update(df["referrer"].values)
+    # Keep in mind: an entity_type is either a top 'referrer', or a top 'path'.
+    # Find all entities seen across snapshots, by their name. For type referrer
+    # a specific entity(referrer) name might be `github.com`.
+    entity_names = set()
+    for df in snapshot_dfs:
+        entity_names.update(df[entity_type].values)
+    del df
 
-    log.info("all referrers seen: %s", referrers)
+    log.info("all %s entities seen: %s", entity_type, entity_names)
 
     # Add bew column to each dataframe: `time`, with the same value for every
     # row: the snapshot time.
-    for df in dfs:
+    for df in snapshot_dfs:
         df["time"] = df.attrs["snapshot_time"]
+    del df
 
-    dfa = pd.concat(dfs)
+    # Clarification: each snapshot dataframe corresponds to a single point in
+    # time (the snapshot time) and contains information about multiple top
+    # referrers/paths. Now, invert that structure: work towards individual
+    # dataframes where each dataframe corresponds to a single referrer/path,
+    # and contains imformation about multiple timestamps
+
+    # First, create a dataframe containing all information.
+    dfa = pd.concat(snapshot_dfs)
 
     # Build a dict: key is referrer name, and value is DF with corresponding
     # raw time series.
-    referrer_dfs = {}
-    for referrer in referrers:
-        log.info("create dataframe for referrer: %s", referrer)
+    entity_dfs = {}
+    for ename in entity_names:
+        log.info("create dataframe for %s: %s", entity_type, ename)
         # Do a subselection
-        rdf = dfa[dfa["referrer"] == referrer]
+        edf = dfa[dfa[entity_type] == ename]
         # Now use datetime column as index
-        newindex = rdf["time"]
-        rdf = rdf.drop(columns=["time"])
-        rdf.index = newindex
-        rdf = rdf.sort_index()
-        print(rdf)
-        referrer_dfs[referrer] = rdf
+        newindex = edf["time"]
+        edf = edf.drop(columns=["time"])
+        edf.index = newindex
+        edf = edf.sort_index()
+        print(edf)
+        entity_dfs[ename] = edf
+
+    del ename
+    del edf
 
     # It's important to clarify what each data point in a per-referrer raw time
     # series means. Each data point has been returned by the GitHub traffic
@@ -220,19 +274,19 @@ def analyse_referrer_snapshots(args):
     # One interesting way to look at the data: find the top 5 referrers based
     # on unique views, and for the entire time range seen.
 
-    ref_max_cu_map = {}
-    for rname, rdf in referrer_dfs.items():
-        ref_max_cu_map[rname] = rdf["count_unique"].max()
+    max_vu_map = {}
+    for ename, edf in entity_dfs.items():
+        max_vu_map[ename] = edf["views_unique"].max()
+    del ename
 
-    # Sort dict so that the first item is the referrer with the highest
-    # count_unique seen.
+    # Sort dict so that the first item is the referrer/path with the highest
+    # views_unique seen.
     sorted_dict = {
-        k: v
-        for k, v in sorted(ref_max_cu_map.items(), key=lambda i: i[1], reverse=True)
+        k: v for k, v in sorted(max_vu_map.items(), key=lambda i: i[1], reverse=True)
     }
 
-    top_n = 5
-    top_n_rnames = list(sorted_dict.keys())[:top_n]
+    top_n = 10
+    top_n_enames = list(sorted_dict.keys())[:top_n]
 
     # simulate a case where there are different timestamps across per-referrer
     # dfs: copy a 'row', and re-insert it with a different timestamp.
@@ -241,16 +295,18 @@ def analyse_referrer_snapshots(args):
     # referrer_dfs["t.co"].loc["2020-12-30 12:25:08+00:00"] = row.iloc[0]
     # print(referrer_dfs["t.co"])
 
-    df_top_cu = pd.DataFrame()
-    for rname in top_n_rnames:
-        rdf = referrer_dfs[rname]
-        print(rdf)
-        df_top_cu[rname] = rdf["count_unique"]
+    df_top_vu = pd.DataFrame()
+    for ename in top_n_enames:
+        edf = entity_dfs[ename]
+        print(edf)
+        df_top_vu[ename] = edf["views_unique"]
+    del ename
 
     log.info(
-        "The top %s referrers based on unique views, for the entire time range seen:\n%s",
+        "The top %s %ss based on unique views, for the entire time range seen:\n%s",
+        entity_type,
         top_n,
-        df_top_cu,
+        df_top_vu,
     )
 
     # For plotting with Altair, reshape the data using pd.melt() to combine the
@@ -258,11 +314,11 @@ def analyse_referrer_snapshots(args):
     # but a value in a column. Ooor we could use the
     # transform_fold() technique
     # https://altair-viz.github.io/user_guide/data.html#converting-between-long-form-and-wide-form-pandas
-    # with .transform_fold(top_n_rnames, as_=["referrer", "count_unique"])
+    # with .transform_fold(top_n_rnames, as_=["referrer", "views_unique"])
     # Also copy index into a normal column via `reset_index()` for
     # https://altair-viz.github.io/user_guide/data.html#including-index-data
-    df_melted = df_top_cu.melt(
-        var_name="referrer", value_name="count_unique", ignore_index=False
+    df_melted = df_top_vu.melt(
+        var_name=entity_type, value_name="views_unique", ignore_index=False
     ).reset_index()
     print(df_melted)
 
@@ -271,20 +327,20 @@ def analyse_referrer_snapshots(args):
     chart = (
         alt.Chart(df_melted)
         .mark_line(point=True)
-        # .encode(x="time:T", y="count_unique:Q", color="referrer:N")
+        # .encode(x="time:T", y="views_unique:Q", color="referrer:N")
         .encode(
             alt.X("time", type="temporal", title="date"),
             alt.Y(
-                "count_unique",
+                "views_unique",
                 type="quantitative",
                 title="unique views per day",
                 scale=alt.Scale(
-                    domain=(0, df_melted["count_unique"].max() * 1.1),
+                    domain=(0, df_melted["views_unique"].max() * 1.1),
                     zero=True,
                 ),
             ),
             alt.Color(
-                "referrer",
+                entity_type,
                 type="nominal",
                 sort=alt.SortField("order"),
             ),
@@ -302,41 +358,24 @@ def analyse_referrer_snapshots(args):
     # container may be a <div> element that has style width: 100%; height:
     # 300px.""
 
+    heading = "Top referrers" if entity_type == "referrer" else "Top paths"
+
     MD_REPORT.write(
         textwrap.dedent(
             f"""
 
-    ## Referrers
+    ## {heading}
 
 
-    <div id="chart_referrers_top_n_alltime" class="full-width-chart"></div>
+    <div id="chart_{entity_type}s_top_n_alltime" class="full-width-chart"></div>
 
 
     """
         )
     )
     JS_FOOTER_LINES.append(
-        f"vegaEmbed('#chart_referrers_top_n_alltime', {chart_spec}, {VEGA_EMBED_OPTIONS_JSON}).catch(console.error);"
+        f"vegaEmbed('#chart_{entity_type}s_top_n_alltime', {chart_spec}, {VEGA_EMBED_OPTIONS_JSON}).catch(console.error);"
     )
-
-    # .transform_fold(
-    # ['AAPL', 'AMZN', 'GOOG'],
-    # as_=['company', 'price']
-
-    # analyse_referrer_snapshots(args)
-    #
-
-    # for df in dfs:
-    #     print(df)
-
-    # # dfat = dfa.transpose()
-    # # dfx = dfa.groupby("referrers").cumcount()
-    # dfa["refindex"] = dfa.groupby("referrers").cumcount()
-    # dfa.set_index("refindex", append=True)
-    # print(dfa)
-
-    # # Build the set of all top referrers seen.
-    # # eferrer_dfs = {}
 
 
 def analyse_view_clones_ts_fragments(args):

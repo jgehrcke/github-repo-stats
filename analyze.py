@@ -67,8 +67,16 @@ JS_FOOTER_LINES = []
 VEGA_EMBED_OPTIONS_JSON = json.dumps({"actions": False, "renderer": "canvas"})
 
 
+if not os.environ.get("GHRS_GITHUB_API_TOKEN", None):
+    sys.exit("error: environment variable GHRS_GITHUB_API_TOKEN empty or not set")
+
+
 def main():
     args = parse_args()
+
+    get_stars_over_time(args)
+    sys.exit()
+
     gen_report_preamble(args)
     configure_altair()
     analyse_view_clones_ts_fragments(args)
@@ -637,17 +645,88 @@ def analyse_view_clones_ts_fragments(args):
     )
 
 
+def get_stars_over_time(args):
+    log.info("fetch star time series for repo %s", args.repospec)
+
+    hub = Github(
+        login_or_token=os.environ["GHRS_GITHUB_API_TOKEN"].strip(), per_page=100
+    )
+    repo = hub.get_repo(args.repospec)
+
+    reqlimit_before = hub.get_rate_limit().core.remaining
+
+    log.info("GH request limit before fetch operation: %s", reqlimit_before)
+
+    gazers = []
+    for count, gazer in enumerate(repo.get_stargazers_with_dates(), 1):
+        # Store `PullRequest` object with integer key in dictionary.
+        gazers.append(gazer)
+        if count % 200 == 0:
+            log.info("%s gazers fetched", count)
+
+    reqlimit_after = hub.get_rate_limit().core.remaining
+    log.info("GH request limit after fetch operation: %s", reqlimit_after)
+    log.info("http requests made (approximately): %s", reqlimit_before - reqlimit_after)
+    log.info("stargazer count: %s", len(gazers))
+
+    # The GitHub API returns ISO 8601 timestamp strings encoding the timezone
+    # via the Z suffix, i.e. Zulu time, i.e. UTC. pygithub doesn't parze that
+    # timezone. That is, whereas the API returns `starred_at` in UTC, the
+    # datetime obj created by pygithub is a naive one. Correct for that.
+    startimes_aware = [pytz.timezone("UTC").localize(g.starred_at) for g in gazers]
+
+    # Work towards a dataframe of the following shape:
+    #                            star_events  stars_cumulative
+    # time
+    # 2020-11-26 16:25:37+00:00            1                 1
+    # 2020-11-26 16:27:23+00:00            1                 2
+    # 2020-11-26 16:30:05+00:00            1                 3
+    # 2020-11-26 17:31:57+00:00            1                 4
+    # 2020-11-26 17:48:48+00:00            1                 5
+    # ...                                ...               ...
+    # 2020-12-19 19:48:58+00:00            1               327
+    # 2020-12-22 04:44:35+00:00            1               328
+    # 2020-12-22 19:00:42+00:00            1               329
+    # 2020-12-25 05:01:42+00:00            1               330
+    # 2020-12-28 01:07:55+00:00            1               331
+
+    # Create sorted pandas DatetimeIndex
+    dtidx = pd.to_datetime(startimes_aware)
+    dtidx = dtidx.sort_values()
+
+    # Each timestamp corresponds to *1* star event. Build cumulative sum over
+    # time.
+    df = pd.DataFrame(
+        data={"star_events": [1] * len(gazers)},
+        index=dtidx,
+    )
+    df.index.name = "time"
+    df["stars_cumulative"] = df["star_events"].cumsum()
+    return df
+
+
 def parse_args():
     global OUTDIR
     parser = argparse.ArgumentParser(description="")
-    parser.add_argument("repospec", help="repo owner/name")
+
+    parser.add_argument(
+        "repospec",
+        metavar="REPOSITORY",
+        help="Owner/organization and repository. Must contain a slash. "
+        "Example: coke/truck",
+    )
+
     parser.add_argument(
         "csvdir", metavar="PATH", help="path to directory containing CSV files"
     )
+
     parser.add_argument("--pandoc-command", default="pandoc")
     parser.add_argument("--resources-directory", default="resources")
     parser.add_argument("--output-directory", default=TODAY + "_report")
     args = parser.parse_args()
+
+    if "/" not in args.repospec:
+        sys.exit("missing slash in REPOSITORY spec")
 
     if os.path.exists(args.output_directory):
         if not os.path.isdir(args.output_directory):

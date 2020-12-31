@@ -15,7 +15,7 @@ https://stackoverflow.com/questions/12850864/is-it-possible-to-track-views-and-c
 The HTML view shows detail about referrers
 graphs/traffic?referrer=govdata.de
 Note sure if this can be seen from the API. Tried things.
-Can scrape!
+Could always scrape this if the API does not provide that level of detail.
 
 
 https://discuss.newrelic.com/t/lambda-function-to-send-your-github-traffic-statistics-to-new-relic-insights/104121
@@ -23,3 +23,23 @@ https://discuss.newrelic.com/t/lambda-function-to-send-your-github-traffic-stati
 Maybe do something like
 https://pypi.org/project/github-traffic-stats
 but focus on GH actions first
+
+HTML report: also render as PDF via e.g.
+https://github.com/westmonroe/pdf-puppeteer
+https://github.com/fraserxu/electron-pdf/ seems pretty broken (tried it)
+https://www.npmjs.com/package/html5-to-pdf: tried, but didn't work
+https://github.com/arachnys/athenapdf
+https://github.com/Szpadel/chrome-headless-render-pdf
+https://github.com/westy92/html-pdf-chrome
+also see appendix in
+https://medium.com/compass-true-north/go-service-to-convert-web-pages-to-pdf-using-headless-chrome-5fd9ffbae1af
+
+For storage, consider this:
+Setup, management etc can all be vastly simplyfied when storing in a branch
+in the repo that this action is set up in
+/snapshots
+/reports
+    /2020-12-xx
+    /2020-12-xx
+/latest-report
+/README.md

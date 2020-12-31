@@ -74,14 +74,18 @@ if not os.environ.get("GHRS_GITHUB_API_TOKEN", None):
 def main():
     args = parse_args()
 
-    get_stars_over_time(args)
-    sys.exit()
+    df_stargazers = get_stars_over_time(args)
 
     gen_report_preamble(args)
+
     configure_altair()
+
     analyse_view_clones_ts_fragments(args)
     analyse_top_x_snapshots("referrer", args)
     analyse_top_x_snapshots("path", args)
+
+    add_stargazers_section(df_stargazers)
+
     gen_report_footer()
     finalize_and_render_report(args)
 
@@ -642,6 +646,48 @@ def analyse_view_clones_ts_fragments(args):
             f"vegaEmbed('#chart_clones_unique', {chart_clones_unique_spec}, {VEGA_EMBED_OPTIONS_JSON}).catch(console.error);",
             f"vegaEmbed('#chart_clones_total', {chart_clones_total_spec}, {VEGA_EMBED_OPTIONS_JSON}).catch(console.error);",
         ]
+    )
+
+
+def add_stargazers_section(df):
+
+    panel_props = {"height": 300, "width": "container", "padding": 10}
+    chart = (
+        alt.Chart(df.reset_index())
+        .mark_line(point=True)
+        .encode(
+            alt.X("time", type="temporal", title="date"),
+            alt.Y(
+                "stars_cumulative",
+                type="quantitative",
+                title="stargazer count (cumulative)",
+                scale=alt.Scale(
+                    domain=(0, df["stars_cumulative"].max() * 1.1),
+                    zero=True,
+                ),
+            ),
+        )
+        .configure_point(size=100)
+        .properties(**panel_props)
+    )
+
+    chart_spec = chart.to_json(indent=None)
+
+    MD_REPORT.write(
+        textwrap.dedent(
+            f"""
+
+    ## Stargazers
+
+
+    <div id="chart_stargazers" class="full-width-chart"></div>
+
+
+    """
+        )
+    )
+    JS_FOOTER_LINES.append(
+        f"vegaEmbed('#chart_stargazers', {chart_spec}, {VEGA_EMBED_OPTIONS_JSON}).catch(console.error);"
     )
 
 

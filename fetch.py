@@ -130,6 +130,7 @@ def parse_args():
         description="Fetch traffic data for GitHub repository. Requires the "
         "environment variables GITHUB_USERNAME and GITHUB_APITOKEN to be set."
     )
+
     parser.add_argument(
         "repo",
         metavar="REPOSITORY",

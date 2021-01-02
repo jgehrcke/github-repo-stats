@@ -64,7 +64,7 @@ MD_REPORT = StringIO()
 JS_FOOTER_LINES = []
 
 # https://github.com/vega/vega-embed#options
-VEGA_EMBED_OPTIONS_JSON = json.dumps({"actions": False, "renderer": "canvas"})
+VEGA_EMBED_OPTIONS_JSON = json.dumps({"actions": False, "renderer": "svg"})
 
 
 if not os.environ.get("GHRS_GITHUB_API_TOKEN", None):

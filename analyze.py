@@ -82,9 +82,12 @@ def main():
     configure_altair()
 
     analyse_view_clones_ts_fragments(args)
+    report_pdf_pagebreak()
+
     analyse_top_x_snapshots("referrer", args)
     analyse_top_x_snapshots("path", args)
 
+    report_pdf_pagebreak()
     add_stargazers_section(df_stargazers)
 
     gen_report_footer()
@@ -124,6 +127,13 @@ def gen_report_preamble(args):
     """
         ).strip()
     )
+
+
+def report_pdf_pagebreak():
+    # This adds a div to the HTML report output that will only take effect
+    # upon print, i.e. for PDF generation.
+    # https://stackoverflow.com/a/1664058/145400
+    MD_REPORT.write('\n\n<div class="pagebreak-for-print"> </div>')
 
 
 def finalize_and_render_report(args):
@@ -725,6 +735,8 @@ def analyse_view_clones_ts_fragments(args):
     #### Total views
     <div id="chart_views_total" class="full-width-chart"></div>
 
+    <div class="pagebreak-for-print-for-print"> </div>
+
 
     ## Clones
 
@@ -845,6 +857,9 @@ def get_stars_over_time(args):
         index=dtidx,
     )
     df.index.name = "time"
+
+    # TODO: downsample to at most N events per day (for repos with 10k stars
+    # the vega chart and data communication does not scale well otherwise).
     df["stars_cumulative"] = df["star_events"].cumsum()
     return df
 

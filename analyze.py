@@ -22,6 +22,7 @@ import glob
 import subprocess
 import shutil
 import sys
+import tempfile
 
 # from collections import Counter,
 from datetime import datetime
@@ -134,8 +135,34 @@ def finalize_and_render_report(args):
     log.info("Copy resources directory into output directory")
     shutil.copytree(args.resources_directory, os.path.join(OUTDIR, "resources"))
 
-    html_report_filepath = os.path.splitext(md_report_filepath)[0] + ".html"
-    log.info("Trying to run Pandoc for generating HTML document")
+    # Generate HTML doc for browser view
+    html_template_filepath = gen_pandoc_html_template("html_browser_view")
+    run_pandoc(
+        args,
+        md_report_filepath,
+        html_template_filepath,
+        html_output_filepath=os.path.splitext(md_report_filepath)[0] + ".html",
+    )
+    # os.unlink(html_template_filepath)
+
+    # Generate HTML doc that will be used for rendering a PDF doc.
+    html_template_filepath = gen_pandoc_html_template("html_pdf_view")
+    run_pandoc(
+        args,
+        md_report_filepath,
+        html_template_filepath,
+        html_output_filepath=os.path.splitext(md_report_filepath)[0] + "_for_pdf.html",
+    )
+    # os.unlink(html_template_filepath)
+
+
+def run_pandoc(args, md_report_filepath, html_template_filepath, html_output_filepath):
+
+    # log.info(
+    #     "Run Pandoc with template %s for generating %s",
+    #     html_template_filepath,
+    #     html_output_filepath,
+    # )
     pandoc_cmd = [
         args.pandoc_command,
         # For allowing raw HTML in Markdown, ref
@@ -143,10 +170,10 @@ def finalize_and_render_report(args):
         "--from=markdown+pandoc_title_block+native_divs",
         "--toc",
         "--standalone",
-        "--template=resources/template.html",
+        f"--template={html_template_filepath}",
         md_report_filepath,
         "-o",
-        html_report_filepath,
+        html_output_filepath,
     ]
 
     log.info("Running command: %s", " ".join(pandoc_cmd))
@@ -154,7 +181,78 @@ def finalize_and_render_report(args):
     if p.returncode == 0:
         log.info("Pandoc terminated indicating success")
     else:
-        log.info("Pandoc terminated indicating error")
+        log.info("Pandoc terminated indicating error: exit code %s", p.returncode)
+
+
+def gen_pandoc_html_template(target):
+    # Generally, a lot could be done with the same pandoc HTML template and
+    # using CSS @media print. Took the more flexible and generic approach
+    # here, though, where we're able to generate two completely different
+    # HTML templates, if needed.
+
+    assert target in ["html_browser_view", "html_pdf_view"]
+
+    if target == "html_browser_view":
+        main_style_block = textwrap.dedent(
+            """
+            <style>
+                body {
+                    box-sizing: border-box;
+                    min-width: 200px;
+                    max-width: 980px;
+                    margin: 0 auto;
+                    padding: 45px;
+                }
+
+                div.full-width-chart {
+                    width: 100%;
+                }
+            </style>
+        """
+        )
+
+    if target == "html_pdf_view":
+        main_style_block = textwrap.dedent(
+            """
+            <style>
+                @media print {
+                  .pagebreak-for-print-for-print {
+                      clear: both;
+                      page-break-after: always;
+                   }
+                }
+
+                body {
+                    margin: 0;
+                    padding: 0;
+                }
+
+                div.full-width-chart {
+                    width: 100%;
+                }
+            </style>
+        """
+        )
+
+    with open("resources/template.html", "rb") as f:
+        tpl_text = f.read().decode("utf-8")
+
+    # Do simple string replacement instead of some string template method: the
+    # pandoc template language uses dollar signs, and the CSS in the file uses
+    # curly braces.
+    rendered_pandoc_template = tpl_text.replace("MAIN_STYLE_BLOCK", main_style_block)
+
+    # Do a pragmatic close/unlink effort at end of program. It's not so bad in
+    # this case when either does not happen. Note that if the temp file path
+    # has no extension then pandoc seems to append `.html` before opening the
+    # file -- which the fails with ENOENT.
+    tmpf = tempfile.NamedTemporaryFile(delete=False, suffix=".html")
+    log.info("creating %s", tmpf.name)
+    tmpf.write(rendered_pandoc_template.encode("utf-8"))
+    tmpf.close()
+
+    # Return path to pandoc template.
+    return tmpf.name
 
 
 def top_x_snapshots_rename_columns(df):

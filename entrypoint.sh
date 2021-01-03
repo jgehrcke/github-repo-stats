@@ -29,7 +29,7 @@ DATA_REPOSPEC="${GITHUB_REPOSITORY}"
 
 # This is the API token used to fetch data (for the repo of interest), and to
 # interact with the data repository.
-GITHUB_API_TOKEN="${INPUT_GHTOKEN}"
+GHRS_GITHUB_API_TOKEN="${INPUT_GHTOKEN}"
 
 
 # The name of the branch in the data repository.
@@ -42,8 +42,8 @@ set -x
 # git clone -b "${DATA_BRANCH_NAME}" \
 #     --single-branch git@github.com:${REPOSPEC}.git
 
-git clone https://ghactions:${GITHUB_API_TOKEN}@github.com/${DATA_REPOSPEC}.git .
-git remote set-url origin https://ghactions:${GITHUB_API_TOKEN}@github.com/${DATA_REPOSPEC}.git
+git clone https://ghactions:${GHRS_GITHUB_API_TOKEN}@github.com/${DATA_REPOSPEC}.git .
+git remote set-url origin https://ghactions:${GHRS_GITHUB_API_TOKEN}@github.com/${DATA_REPOSPEC}.git
 git checkout "${DATA_BRANCH_NAME}" || git checkout -b "${DATA_BRANCH_NAME}"
 
 git config --local user.email "action@github.com"

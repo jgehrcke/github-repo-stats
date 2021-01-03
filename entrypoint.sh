@@ -90,6 +90,8 @@ git add current-report.pdf
 git commit -m "github-repo-stats: add PDF report ${UPDATE_ID}"
 
 
+git push --set-upstream origin "${DATA_BRANCH_NAME}"
+
 # Ignore GCS approach for now.
 exit 0
 

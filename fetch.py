@@ -179,21 +179,21 @@ def parse_args():
 
 def referrers_to_df(top_referrers):
     series_referrers = []
-    series_count_unique = []
-    series_count_total = []
+    series_views_unique = []
+    series_views_total = []
     for p in top_referrers:
         series_referrers.append(p.referrer)
-        series_count_total.append(p.count)
-        series_count_unique.append(p.uniques)
+        series_views_total.append(p.count)
+        series_views_unique.append(p.uniques)
 
     df = pd.DataFrame(
         data={
-            f"count_total": series_count_total,
-            f"count_unique": series_count_unique,
+            "views_total": series_views_total,
+            "views_unique": series_views_unique,
         },
         index=series_referrers,
     )
-    df.index.name = "referrers"
+    df.index.name = "referrer"
 
     # Attach metadata to dataframe, still experimental -- also see
     # https://stackoverflow.com/q/52122674/145400
@@ -213,12 +213,12 @@ def paths_to_df(top_paths):
 
     df = pd.DataFrame(
         data={
-            f"views_total": series_views_total,
-            f"views_unique": series_views_unique,
+            "views_total": series_views_total,
+            "views_unique": series_views_unique,
         },
         index=series_url_paths,
     )
-    df.index.name = "url_paths"
+    df.index.name = "url_path"
 
     # Attach metadata to dataframe, new as of pandas 1.0 -- also see
     # https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.attrs.html

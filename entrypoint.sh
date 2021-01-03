@@ -1,28 +1,95 @@
 #!/bin/bash -l
 
+set -o errexit
+set -o errtrace
+set -o nounset
+set -o pipefail
+
 # GHRS: GitHub Repo Stats https://github.com/jgehrcke/github-repo-stats
 
 echo "GHRS entrypoint.sh: pwd: $(pwd)"
 
-# Arguments in GH actions will be passed/defined via the action.yaml file.
+RNDSTR=$(python -c 'import uuid; print(uuid.uuid4().hex.upper()[0:4])')
+UPDATE_ID="$(date +"%m-%d-%H%M" --utc)-${RNDSTR}"
 
-# Default to GITHUB_REPOSITORY.
-REPOSPEC="${GITHUB_REPOSITORY}"
 
-# TODO: can be overridden to use a repository _different_ from where the
-# workflow is being executed.
-#REPOSPEC="${GHRS_REPO_SPEC}"
+# "When you specify an input to an action in a workflow file or use a default
+# input value, GitHub creates an environment variable for the input with the
+# name INPUT_<VARIABLE_NAME>. The environment variable created converts input
+# names to uppercase letters and replaces spaces with _ characters."
 
-# For now: hard-code
-REPOSPEC="jgehrcke/covid-19-germany-gae"
+
+REPOSPEC="${INPUT_REPOSITORY}"
+GITHUB_API_TOKEN="${INPUT_GHTOKEN}"
+DATA_BRANCH_NAME="${INPUT_DATABRANCH}"
+
+set -x
+# Expected to be an empty directory.
+cd $GITHUB_WORKSPACE
+
+# Clone / check out specific branch only (to minimize overhead, also see
+# https://stackoverflow.com/a/4568323/145400).
+#git clone -b "${DATA_BRANCH_NAME}" \
+#    --single-branch git@github.com:${REPOSPEC}.git
+
+# Require this branch to exist.
+git checkout "${DATA_BRANCH_NAME}"
+
+git config --local user.email "action@github.com"
+git config --local user.name "GitHub Action"
+
+mkdir newdata
+echo "Fetch new data"
+python /fetch.py "${REPOSPEC}" --output-directory=newdata
+FETCH_ECODE=$?
+set +x
+
+if [ $FETCH_ECODE -ne 0 ]; then
+    echo "error: fetch.py returned with code ${FETCH_ECODE} -- exit."
+    exit $FETCH_ECODE
+fi
+
+echo "fetch.py returned with exit code 0. proceed."
+echo "tree in $(pwd)/newdata:"
+tree newdata
+
+set -x
+mkdir -p ghrs_data_snapshots
+cp -a newdata/* ghrs_data_snapshots
+
+# New data files: show them from git's point of view.
+git status --untracked=no --porcelain
+git add ghrs_data_snapshots
+git commit -m "github-repo-stats: new snapshot ${UPDATE_ID}"
+
+
+echo "Generate new HTML report"
+python /analyze.py \
+    --resources-directory /resources \
+    --output-directory newreport \
+    "${REPOSPEC}" ghrs_data_snapshots
+
+
+stat newreport/*_report_for_pdf.html
+
+echo "Translate HTML report into PDF with headless Chrome"
+python pdf.py 2021-01-02_report/2021-01-02_report_for_pdf.html
+
+mv report.pdf current-report.pdf
+git add current-report.pdf
+git commit -m "github-repo-stats: add PDF report ${UPDATE_ID}"
+
+
+# Ignore GCS approach for now.
+exit 0
+
+# Brief sleep as a workaround for having non-interleaving output of `tree` and
+# `gcloud auth`.
+sleep 1
+
 
 if [[ ! $GHRS_GCS_BUCKET_NAME ]]; then
     echo "bad env: GHRS_GCS_BUCKET_NAME appears to be empty or not set"
-    exit 1
-fi
-
-if [[ ! $GHRS_GITHUB_API_TOKEN ]]; then
-    echo "bad env: GHRS_GITHUB_API_TOKEN appears to be empty or not set"
     exit 1
 fi
 
@@ -51,32 +118,6 @@ GCP_CREDENTIAL_FILE="/gcs_svc_acc.json"
 echo "$GHRS_GCS_SVC_ACC_JSON" > ${GCP_CREDENTIAL_FILE}
 chmod 600 ${GCP_CREDENTIAL_FILE}
 
-GHRS_OUTDIR="newdata"
-# The container
-echo "change to /rundir"
-cd /rundir
-mkdir "${GHRS_OUTDIR}"
-
-echo "Fetch new data"
-set -x
-python /fetch.py "${REPOSPEC}" --output-directory=${GHRS_OUTDIR}
-FETCH_ECODE=$?
-set +x
-
-if [ $FETCH_ECODE -ne 0 ]; then
-    echo "error: fetch.py returned with code ${FETCH_ECODE} -- exit."
-    exit $FETCH_ECODE
-fi
-
-echo "fetch.py returned with exit code 0. proceed."
-
-echo "tree in $(pwd):"
-tree
-
-
-# Brief sleep as a workaround for having non-interleaving output of `tree` and
-# `gcloud auth`.
-sleep 1
 
 # Do not use `-d/--delete` so that remote data is not deleted. Plan with a flat
 # file hierarchy / set of files in GHRS_OUTDIR, i.e. do not use `-r`. Sync the

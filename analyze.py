@@ -278,7 +278,7 @@ def top_x_snapshots_rename_columns(df):
         pass
 
     try:
-        df.rename(columns={"url_paths": "path"}, inplace=True)
+        df.rename(columns={"url_path": "path"}, inplace=True)
     except ValueError:
         pass
 

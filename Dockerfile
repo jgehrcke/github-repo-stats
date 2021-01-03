@@ -1,14 +1,8 @@
 FROM python:3.8-slim-buster
 
-# - moreutils, for `chronic` and `ts`.
-# - make, for running make targets in the container
-# - git, for interacting with the current checkout.
-# - gettext-base for envsubst
-# - uuid-runtime for uuidgen used by ci_events
 RUN apt-get update && apt-get install -y -q --no-install-recommends \
-    gnupg curl git jq moreutils ca-certificates unzip less tree
+    gnupg curl git jq moreutils ca-certificates unzip less tree pandoc
 
-#RUN apt-get install hub -y
 RUN echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] http://packages.cloud.google.com/apt cloud-sdk main" | \
     tee -a /etc/apt/sources.list.d/google-cloud-sdk.list
 RUN curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | \
@@ -25,10 +19,14 @@ RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2
     ./aws/install && \
     rm awscliv2.zip
 
-RUN pip install pandas==1.1.5 PyGitHub==1.54 pytz retrying
+RUN pip install pandas==1.1.5 PyGitHub==1.54 pytz retrying \
+    selenium==3.141.0 carbonplan[styles] altair
 
 COPY fetch.py /fetch.py
+COPY analyze.py /analyze.py
+COPY pdf.py /pdf.py
 COPY entrypoint.sh /entrypoint.sh
+COPY resources /resources
 
 RUN mkdir /rundir && cd /rundir
 WORKDIR /rundir

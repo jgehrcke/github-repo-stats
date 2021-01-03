@@ -264,6 +264,12 @@ def handle_rate_limit_error(exc):
         return True
 
     if "403" in str(exc):
+        if "Resource not accessible by integration" in str(exc):
+            log.error(
+                'this appears to be a permanent error, as in "access denied -- do not retry"'
+            )
+            sys.exit(1)
+
         log.warning("Exception contains 403, wait 60 s, retry: %s", str(exc))
         # The request count quota is not necessarily responsible for this
         # exception, but it usually is. Log the expected local time when the

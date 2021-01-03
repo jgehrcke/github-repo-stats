@@ -11,6 +11,8 @@ Switch to using https://github.com/jd/tenacity
 Note here when done:
 https://stackoverflow.com/questions/12850864/is-it-possible-to-track-views-and-clones-of-my-github-repositories
 
+Collect and visualize Forks-over-time
+
 
 The HTML view shows detail about referrers
 graphs/traffic?referrer=govdata.de
@@ -23,6 +25,12 @@ https://discuss.newrelic.com/t/lambda-function-to-send-your-github-traffic-stati
 Maybe do something like
 https://pypi.org/project/github-traffic-stats
 but focus on GH actions first
+
+Add commentary to what the plots show.
+
+For stargazers, link to
+https://opensource.stackexchange.com/a/5114/21503
+
 
 HTML report: also render as PDF via e.g.
 https://github.com/westmonroe/pdf-puppeteer

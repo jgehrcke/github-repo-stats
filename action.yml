@@ -2,13 +2,13 @@ name: "github-repo-stats"
 description: "github-repo-stats"
 inputs:
   repository:
-    description: "Repository spec (<owner-or-org>/<reponame>)"
+    description: "Repository spec (<owner-or-org>/<reponame>) for repo to fetch stats for"
     default: ${{ github.repository }}
   ghtoken:
-    description: "GitHub API token for reading the repo stats, and for pushing data to repo"
+    description: "GitHub API token for reading the repo stats and for interacting with data repo (must be set if repo to fetch stats for is not the data repo)"
     default: ${{ github.token }}
   databranch:
-    description: "Branch to push data to"
+    description: "Branch to push data to (in the data repo)"
     default: github-repo-stats
 runs:
   using: "docker"

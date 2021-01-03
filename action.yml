@@ -1,5 +1,15 @@
 name: "github-repo-stats"
 description: "github-repo-stats"
+inputs:
+  repository:
+    description: "Repository spec (<owner-or-org>/<reponame>)"
+    default: ${{ github.repository }}
+  ghtoken:
+    description: "GitHub API token for reading the repo stats, and for pushing data to repo"
+    default: ${{ github.token }}
+  databranch:
+    description: "Branch to push data to"
+    default: github-repo-stats
 runs:
   using: "docker"
   image: "Dockerfile"

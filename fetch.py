@@ -266,7 +266,8 @@ def handle_rate_limit_error(exc):
     if "403" in str(exc):
         if "Resource not accessible by integration" in str(exc):
             log.error(
-                'this appears to be a permanent error, as in "access denied -- do not retry"'
+                'this appears to be a permanent error, as in "access denied -- do not retry: %s',
+                str(exc),
             )
             sys.exit(1)
 

@@ -24,16 +24,22 @@ GITHUB_API_TOKEN="${INPUT_GHTOKEN}"
 DATA_BRANCH_NAME="${INPUT_DATABRANCH}"
 
 set -x
-# Expected to be an empty directory.
-cd $GITHUB_WORKSPACE
+
+# https://stackoverflow.com/a/30524983/145400
+git ls-remote --heads git@github.com:${REPOSPEC}.git "${DATA_BRANCH_NAME}" | \
+    grep "${DATA_BRANCH_NAME}" >/dev/null
+if [ "$?" == "1" ]; then
+    echo "Branch doesn't exist yet, create it"
+    git checkout -b "${DATA_BRANCH_NAME}"
+else
+    git checkout "${DATA_BRANCH_NAME}"
+fi
 
 # Clone / check out specific branch only (to minimize overhead, also see
 # https://stackoverflow.com/a/4568323/145400).
 #git clone -b "${DATA_BRANCH_NAME}" \
 #    --single-branch git@github.com:${REPOSPEC}.git
 
-# Require this branch to exist.
-git checkout "${DATA_BRANCH_NAME}"
 
 git config --local user.email "action@github.com"
 git config --local user.name "GitHub Action"

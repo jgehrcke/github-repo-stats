@@ -2,8 +2,11 @@
 
 Input:
 
-- `GHRS_GITHUB_API_TOKEN` (sensitive): for reading the repo stats, and for pushing data to repo (defaults to `github.token` / `${{ secrets.GITHUB_TOKEN }}`)
+- `GHRS_GITHUB_API_TOKEN` (sensitive): for reading the repo stats. Must be set if data repository is different from stats repository.
+
 - `GHRS_DATA_BRANCH`: branch for pushing data and report to. Defaults to `github-repo-stats`.
+
+The API token used for pushing data to the data repo defaults to `github.token`.
 
 Default behavior:
 

@@ -29,8 +29,7 @@ DATA_REPOSPEC="${GITHUB_REPOSITORY}"
 
 # This is the API token used to fetch data (for the repo of interest), and to
 # interact with the data repository.
-GHRS_GITHUB_API_TOKEN="${INPUT_GHTOKEN}"
-
+export GHRS_GITHUB_API_TOKEN="${INPUT_GHTOKEN}"
 
 # The name of the branch in the data repository.
 DATA_BRANCH_NAME="${INPUT_DATABRANCH}"

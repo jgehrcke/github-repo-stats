@@ -18,9 +18,21 @@ UPDATE_ID="$(date +"%m-%d-%H%M" --utc)-${RNDSTR}"
 # name INPUT_<VARIABLE_NAME>. The environment variable created converts input
 # names to uppercase letters and replaces spaces with _ characters."
 
+# The data repository and the repository to fetch statistics for do not
+# need to be the same!
 
-REPOSPEC="${INPUT_REPOSITORY}"
+# This is the repository to fetch data for.
+STATS_REPOSPEC="${INPUT_REPOSITORY}"
+
+# This is the repository to store data and reports in.
+DATA_REPOSPEC="${GITHUB_REPOSITORY}"
+
+# This is the API token used to fetch data (for the repo of interest), and to
+# interact with the data repository.
 GITHUB_API_TOKEN="${INPUT_GHTOKEN}"
+
+
+# The name of the branch in the data repository.
 DATA_BRANCH_NAME="${INPUT_DATABRANCH}"
 
 set -x
@@ -30,16 +42,16 @@ set -x
 # git clone -b "${DATA_BRANCH_NAME}" \
 #     --single-branch git@github.com:${REPOSPEC}.git
 
-git clone https://ghactions:${GITHUB_API_TOKEN}@github.com/${REPOSPEC}.git .
-git remote set-url origin https://ghactions:${GITHUB_API_TOKEN}@github.com/${REPOSPEC}.git
+git clone https://ghactions:${GITHUB_API_TOKEN}@github.com/${DATA_REPOSPEC}.git .
+git remote set-url origin https://ghactions:${GITHUB_API_TOKEN}@github.com/${DATA_REPOSPEC}.git
 git checkout "${DATA_BRANCH_NAME}" || git checkout -b "${DATA_BRANCH_NAME}"
 
 git config --local user.email "action@github.com"
 git config --local user.name "GitHub Action"
 
 mkdir newdata
-echo "Fetch new data"
-python /fetch.py "${REPOSPEC}" --output-directory=newdata
+echo "Fetch new data for ${STATS_REPOSPEC}"
+python /fetch.py "${STATS_REPOSPEC}" --output-directory=newdata
 FETCH_ECODE=$?
 set +x
 
@@ -66,7 +78,7 @@ echo "Generate new HTML report"
 python /analyze.py \
     --resources-directory /resources \
     --output-directory newreport \
-    "${REPOSPEC}" ghrs_data_snapshots
+    "${STATS_REPOSPEC}" ghrs_data_snapshots
 
 
 stat newreport/*_report_for_pdf.html

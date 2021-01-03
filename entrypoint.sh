@@ -25,16 +25,19 @@ DATA_BRANCH_NAME="${INPUT_DATABRANCH}"
 
 set -x
 
-git checkout "${DATA_BRANCH_NAME}" || git checkout -b "${DATA_BRANCH_NAME}"
+git config --local user.email "action@github.com"
+git config --local user.name "GitHub Action"
+
 
 # Clone / check out specific branch only (to minimize overhead, also see
 # https://stackoverflow.com/a/4568323/145400).
-#git clone -b "${DATA_BRANCH_NAME}" \
-#    --single-branch git@github.com:${REPOSPEC}.git
+# git clone -b "${DATA_BRANCH_NAME}" \
+#     --single-branch git@github.com:${REPOSPEC}.git
 
+git clone https://ghactions:${GITHUB_API_TOKEN}@github.com/${REPOSPEC}.git .
+git remote set-url origin https://ghactions:${GITHUB_API_TOKEN}@github.com/${REPOSPEC}.git
+git checkout "${DATA_BRANCH_NAME}" || git checkout -b "${DATA_BRANCH_NAME}"
 
-git config --local user.email "action@github.com"
-git config --local user.name "GitHub Action"
 
 mkdir newdata
 echo "Fetch new data"

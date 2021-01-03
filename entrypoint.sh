@@ -83,7 +83,7 @@ python /analyze.py \
 stat newreport/*_report_for_pdf.html
 
 echo "Translate HTML report into PDF with headless Chrome"
-python /pdf.py 2021-01-02_report/2021-01-02_report_for_pdf.html
+python /pdf.py newreport/*_report_for_pdf.html
 
 mv report.pdf current-report.pdf
 git add current-report.pdf

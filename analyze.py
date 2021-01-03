@@ -39,6 +39,8 @@ import matplotlib
 
 # from matplotlib import pyplot as plt
 
+ARGS = None
+
 
 """
 makes use of code and methods from my other projects at
@@ -244,7 +246,7 @@ def gen_pandoc_html_template(target):
         """
         )
 
-    with open("resources/template.html", "rb") as f:
+    with open(os.path.join(ARGS.resources_directory, "template.html"), "rb") as f:
         tpl_text = f.read().decode("utf-8")
 
     # Do simple string replacement instead of some string template method: the
@@ -866,6 +868,7 @@ def get_stars_over_time(args):
 
 def parse_args():
     global OUTDIR
+    global ARGS
     parser = argparse.ArgumentParser(description="")
 
     parser.add_argument(
@@ -902,6 +905,7 @@ def parse_args():
     os.makedirs(args.output_directory)
 
     OUTDIR = args.output_directory
+    ARGS = args
 
     return args
 

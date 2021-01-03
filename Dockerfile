@@ -20,7 +20,7 @@ RUN apt-get update && apt-get install -y -q --no-install-recommends \
 #     rm awscliv2.zip
 
 RUN pip install pandas==1.1.5 PyGitHub==1.54 pytz retrying \
-    selenium==3.141.0 carbonplan[styles] altair
+    selenium==3.141.0 webdriver_manager carbonplan[styles] altair
 
 COPY fetch.py /fetch.py
 COPY analyze.py /analyze.py

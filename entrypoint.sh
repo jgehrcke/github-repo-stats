@@ -40,16 +40,23 @@ set -x
 # https://stackoverflow.com/a/4568323/145400).
 # git clone -b "${DATA_BRANCH_NAME}" \
 #     --single-branch git@github.com:${REPOSPEC}.git
-
 git clone https://ghactions:${GHRS_GITHUB_API_TOKEN}@github.com/${DATA_REPOSPEC}.git .
 git remote set-url origin https://ghactions:${GHRS_GITHUB_API_TOKEN}@github.com/${DATA_REPOSPEC}.git
 git checkout "${DATA_BRANCH_NAME}" || git checkout -b "${DATA_BRANCH_NAME}"
-
 git config --local user.email "action@github.com"
 git config --local user.name "GitHub Action"
 
+# Do not write to the root of the repository, but to a directory named after
+# the stats respository (owner/repo). So that, in theory, this data repository
+# can be used by GHRS for more than one stats repositories, using the same git.
+# branch.
+mkdir -p "${STATS_REPOSPEC}"
+cd "${STATS_REPOSPEC}"
+
+echo "operating in $(pwd)"
+
 mkdir newdata
-echo "Fetch new data for ${STATS_REPOSPEC}"
+echo "Fetch new data snapshot for ${STATS_REPOSPEC}"
 python /fetch.py "${STATS_REPOSPEC}" --output-directory=newdata
 FETCH_ECODE=$?
 set +x
@@ -64,32 +71,31 @@ echo "tree in $(pwd)/newdata:"
 tree newdata
 
 set -x
-mkdir -p ghrs_data_snapshots
-cp -a newdata/* ghrs_data_snapshots
+mkdir -p ghrs-data-snapshots
+cp -a newdata/* ghrs-data-snapshots
 
 # New data files: show them from git's point of view.
 git status --untracked=no --porcelain
-git add ghrs_data_snapshots
-git commit -m "github-repo-stats: new snapshot ${UPDATE_ID}"
+git add ghrs-data-snapshots
+git commit -m "ghrs: snap ${UPDATE_ID} for ${STATS_REPOSPEC}"
 
 
 echo "Generate new HTML report"
 python /analyze.py \
     --resources-directory /resources \
-    --output-directory newreport \
-    "${STATS_REPOSPEC}" ghrs_data_snapshots
+    --output-directory latest-report \
+    --outfile-prefix "" \
+    "${STATS_REPOSPEC}" ghrs-data-snapshots
 
 
-stat newreport/*_report_for_pdf.html
+stat latest-report/report_for_pdf.html
 
 echo "Translate HTML report into PDF with headless Chrome"
-python /pdf.py newreport/*_report_for_pdf.html
+python /pdf.py latest-report/report_for_pdf.html latest-report/report.pdf
 
-mv report.pdf current-report.pdf
-git add current-report.pdf
-git commit -m "github-repo-stats: add PDF report ${UPDATE_ID}"
-
-
+# Add directory contents (markdown, HTML, PDF).
+git add latest-report
+git commit -m "ghrs: report ${UPDATE_ID} for ${STATS_REPOSPEC}"
 git push --set-upstream origin "${DATA_BRANCH_NAME}"
 
 # Ignore GCS approach for now.

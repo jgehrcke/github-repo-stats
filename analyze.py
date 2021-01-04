@@ -804,6 +804,9 @@ def add_stargazers_section(df):
 
 
 def get_stars_over_time(args):
+    # TODO: for ~10k stars repositories, this operation is too costly for doing
+    # it as part of each analyzer invocation. Move this to the fetcher, and
+    # persist the data.
     log.info("fetch star time series for repo %s", args.repospec)
 
     hub = Github(
@@ -860,10 +863,23 @@ def get_stars_over_time(args):
     )
     df.index.name = "time"
 
-    # TODO: downsample to at most N events per day (for repos with 10k stars
-    # the vega chart and data communication does not scale well otherwise).
     df["stars_cumulative"] = df["star_events"].cumsum()
-    return df
+
+    # TODO: adjust this bin width to the timeframe covered. Make it so that
+    # there are not more than ~100 data points for the entire time frame.
+    n_hour_bins = 24
+    log.info('len(df["stars_cumulative"]): %s', len(df["stars_cumulative"]))
+    log.info("downsample series into %s-hour bins", n_hour_bins)
+    # Resample the series into N-hour bins. Take max() for each group (could
+    # also do sum() for each group before the cumsum() operation above).
+    # do `dropna()` on the resampler to remove all up-sampled data points
+    stargazer_series = df["stars_cumulative"].resample(f"{n_hour_bins}h").max().dropna()
+    log.info("len(stargazer_series): %s", len(stargazer_series))
+
+    # Turn Series object into Dataframe object again, so that the column
+    # can be referred to explicitly, and for easier plotting. The values
+    # column retains the `stars_cumulative` name.
+    return stargazer_series.to_frame()
 
 
 def parse_args():

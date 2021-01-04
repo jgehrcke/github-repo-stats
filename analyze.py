@@ -668,6 +668,12 @@ def analyse_view_clones_ts_fragments():
     dfall = pd.concat(dfs)
 
     if df_prev_agg is not None:
+        if set(df_prev_agg.columns) != set(dfall.columns):
+            log.error(
+                "set(df_prev_agg.columns) != set (dfall.columns): %s, %s",
+                df_prev_agg.columns,
+            )
+            sys.exit(1)
         log.info("pd.concat(dfall, df_prev_agg)")
         dfall = pd.concat([dfall, df_prev_agg])
 
@@ -714,6 +720,10 @@ def analyse_view_clones_ts_fragments():
                     "would overwrite output aggregate w/o reading input aggregate -- you know what you're doing?"
                 )
                 sys.exit(1)
+
+        # Some older fragment files might contain floaty values. All metrics
+        # are known to be integers by definition here.
+        df_agg = df_agg.astype(int)
 
         log.info("write aggregate to %s", ARGS.views_clones_aggregate_outpath)
         # Pragmatic strategy against partial write / encoding problems.

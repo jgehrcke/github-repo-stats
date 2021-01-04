@@ -433,9 +433,9 @@ def analyse_top_x_snapshots(entity_type, args):
     # del ename
 
     log.info(
-        "The top %s %ss based on unique views, for the entire time range seen:\n%s",
-        entity_type,
+        "The top %s %s based on unique views, for the entire time range seen:\n%s",
         top_n,
+        entity_type,
         df_top_vu,
     )
 

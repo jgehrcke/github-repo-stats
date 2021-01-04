@@ -13,6 +13,7 @@
 # License for the specific language governing permissions and limitations under
 # the License.
 
+import argparse
 import os
 import sys
 import json
@@ -38,7 +39,20 @@ logging.basicConfig(
 
 def main():
 
-    html_doc_path = sys.argv[1]
+    parser = argparse.ArgumentParser(description="")
+    parser.add_argument(
+        "htmlpath",
+        metavar="HTML_PATH",
+    )
+
+    parser.add_argument(
+        "pdfpath",
+        metavar="PDF_PATH",
+    )
+
+    args = parser.parse_args()
+
+    html_doc_path = args.htmlpath
     html_apath = os.path.abspath(html_doc_path)
 
     log.info("html_apath: %s", html_apath)
@@ -48,9 +62,8 @@ def main():
 
     pdf_bytes = gen_pdf_bytes(html_apath)
 
-    ofile_path = "report.pdf"
-    log.info("write %s bytes to %s", len(pdf_bytes), ofile_path)
-    with open(ofile_path, "wb") as f:
+    log.info("write %s bytes to %s", len(pdf_bytes), args.pdfpath)
+    with open(args.pdfpath, "wb") as f:
         f.write(pdf_bytes)
 
     log.info("done")

@@ -666,7 +666,10 @@ def analyse_view_clones_ts_fragments():
             # If unlinkling fails at OS boundary then don't crash this program.
             for p in csvpaths:
                 log.info("delete %s as of --delete-ts-fragments", p)
-                os.unlink(p)
+                try:
+                    os.unlink(p)
+                except Exception as e:
+                    log.warning("could not unlink %s: %s", p, str(e))
 
     # print(df_agg)
 

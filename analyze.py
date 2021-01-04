@@ -24,22 +24,16 @@ import shutil
 import sys
 import tempfile
 
-# from collections import Counter,
 from datetime import datetime
 from io import StringIO
 
 import pandas as pd
 from github import Github
-import requests
 import retrying
 import pytz
 
 import altair as alt
 import matplotlib
-
-# from matplotlib import pyplot as plt
-
-ARGS = None
 
 
 """
@@ -53,47 +47,49 @@ https://github.com/jgehrcke/goeffel
 log = logging.getLogger()
 logging.basicConfig(
     level=logging.INFO,
-    format="%(asctime)s.%(msecs)03d %(levelname)s:%(threadName)s: %(message)s",
+    format="%(asctime)s.%(msecs)03d %(levelname)s: %(message)s",
     datefmt="%y%m%d-%H:%M:%S",
 )
+
 
 NOW = datetime.utcnow()
 TODAY = NOW.strftime("%Y-%m-%d")
 OUTDIR = None
+ARGS = None
+
 
 # Individual code sections are supposed to add to this in-memory Markdown
 # document as they desire.
 MD_REPORT = StringIO()
 JS_FOOTER_LINES = []
 
-# https://github.com/vega/vega-embed#options
+# https://github.com/vega/vega-embed#options -- use SVG renderer so that PDF
+# export (print) from browser view yields arbitrarily scalable (vector)
+# graphics embedded in the PDF doc, instead of rasterized graphics.
 VEGA_EMBED_OPTIONS_JSON = json.dumps({"actions": False, "renderer": "svg"})
 
 
-if not os.environ.get("GHRS_GITHUB_API_TOKEN", None):
-    sys.exit("error: environment variable GHRS_GITHUB_API_TOKEN empty or not set")
-
-
 def main():
-    args = parse_args()
+    if not os.environ.get("GHRS_GITHUB_API_TOKEN", None):
+        sys.exit("error: environment variable GHRS_GITHUB_API_TOKEN empty or not set")
 
-    df_stargazers = get_stars_over_time(args)
-
-    gen_report_preamble(args)
-
+    parse_args()
     configure_altair()
 
-    analyse_view_clones_ts_fragments(args)
+    df_stargazers = get_stars_over_time()
+    gen_report_preamble()
+
+    analyse_view_clones_ts_fragments()
     report_pdf_pagebreak()
 
-    analyse_top_x_snapshots("referrer", args)
-    analyse_top_x_snapshots("path", args)
+    analyse_top_x_snapshots("referrer")
+    analyse_top_x_snapshots("path")
 
     report_pdf_pagebreak()
     add_stargazers_section(df_stargazers)
 
     gen_report_footer()
-    finalize_and_render_report(args)
+    finalize_and_render_report()
 
 
 def configure_altair():
@@ -118,12 +114,12 @@ def gen_report_footer():
     )
 
 
-def gen_report_preamble(args):
+def gen_report_preamble():
     now_text = NOW.strftime("%Y-%m-%d %H:%M UTC")
     MD_REPORT.write(
         textwrap.dedent(
             f"""
-    % Statistics for {args.repospec}
+    % Statistics for {ARGS.repospec}
     % Generated with [jgehrcke/github-repo-stats](https://github.com/jgehrcke/github-repo-stats) at {now_text}.
 
     """
@@ -135,48 +131,41 @@ def report_pdf_pagebreak():
     # This adds a div to the HTML report output that will only take effect
     # upon print, i.e. for PDF generation.
     # https://stackoverflow.com/a/1664058/145400
-    MD_REPORT.write('\n\n<div class="pagebreak-for-print"> </div>')
+    MD_REPORT.write('\n\n<div class="pagebreak-for-print"> </div>\n\n')
 
 
-def finalize_and_render_report(args):
+def finalize_and_render_report():
     md_report_filepath = os.path.join(OUTDIR, f"{ARGS.outfile_prefix}report.md")
     log.info("Write generated Markdown report to: %s", md_report_filepath)
     with open(md_report_filepath, "wb") as f:
         f.write(MD_REPORT.getvalue().encode("utf-8"))
 
     log.info("Copy resources directory into output directory")
-    shutil.copytree(args.resources_directory, os.path.join(OUTDIR, "resources"))
+    shutil.copytree(ARGS.resources_directory, os.path.join(OUTDIR, "resources"))
 
     # Generate HTML doc for browser view
     html_template_filepath = gen_pandoc_html_template("html_browser_view")
     run_pandoc(
-        args,
         md_report_filepath,
         html_template_filepath,
         html_output_filepath=os.path.splitext(md_report_filepath)[0] + ".html",
     )
-    # os.unlink(html_template_filepath)
+    os.unlink(html_template_filepath)
 
     # Generate HTML doc that will be used for rendering a PDF doc.
     html_template_filepath = gen_pandoc_html_template("html_pdf_view")
     run_pandoc(
-        args,
         md_report_filepath,
         html_template_filepath,
         html_output_filepath=os.path.splitext(md_report_filepath)[0] + "_for_pdf.html",
     )
-    # os.unlink(html_template_filepath)
+    os.unlink(html_template_filepath)
 
 
-def run_pandoc(args, md_report_filepath, html_template_filepath, html_output_filepath):
+def run_pandoc(md_report_filepath, html_template_filepath, html_output_filepath):
 
-    # log.info(
-    #     "Run Pandoc with template %s for generating %s",
-    #     html_template_filepath,
-    #     html_output_filepath,
-    # )
     pandoc_cmd = [
-        args.pandoc_command,
+        ARGS.pandoc_command,
         # For allowing raw HTML in Markdown, ref
         # https://stackoverflow.com/a/39229302/145400.
         "--from=markdown+pandoc_title_block+native_divs",
@@ -190,6 +179,7 @@ def run_pandoc(args, md_report_filepath, html_template_filepath, html_output_fil
 
     log.info("Running command: %s", " ".join(pandoc_cmd))
     p = subprocess.run(pandoc_cmd)
+
     if p.returncode == 0:
         log.info("Pandoc terminated indicating success")
     else:
@@ -249,9 +239,9 @@ def gen_pandoc_html_template(target):
     with open(os.path.join(ARGS.resources_directory, "template.html"), "rb") as f:
         tpl_text = f.read().decode("utf-8")
 
-    # Do simple string replacement instead of some string template method: the
-    # pandoc template language uses dollar signs, and the CSS in the file uses
-    # curly braces.
+    # Do simple string replacement instead of picking one of the established
+    # templating methods: the pandoc template language uses dollar signs, and
+    # the CSS in the file uses curly braces.
     rendered_pandoc_template = tpl_text.replace("MAIN_STYLE_BLOCK", main_style_block)
 
     # Do a pragmatic close/unlink effort at end of program. It's not so bad in
@@ -295,14 +285,14 @@ def top_x_snapshots_rename_columns(df):
         pass
 
 
-def analyse_top_x_snapshots(entity_type, args):
+def analyse_top_x_snapshots(entity_type):
     assert entity_type in ["referrer", "path"]
 
     log.info("read 'top %s' snapshots (CSV docs)", entity_type)
 
     basename_suffix = f"_top_{entity_type}s_snapshot.csv"
     basename_pattern = f"*{basename_suffix}"
-    csvpaths = glob.glob(os.path.join(args.csvdir, basename_pattern))
+    csvpaths = glob.glob(os.path.join(ARGS.csvdir, basename_pattern))
     log.info(
         "number of CSV files discovered for %s: %s",
         basename_pattern,
@@ -546,10 +536,10 @@ def analyse_top_x_snapshots(entity_type, args):
     )
 
 
-def analyse_view_clones_ts_fragments(args):
+def analyse_view_clones_ts_fragments():
 
     log.info("read views/clones time series fragments (CSV docs)")
-    views_clones_csvpaths = glob.glob(os.path.join(args.csvdir, "*views_clones*.csv"))
+    views_clones_csvpaths = glob.glob(os.path.join(ARGS.csvdir, "*views_clones*.csv"))
     log.info(
         "number of CSV files discovered for views/clones: %s",
         len(views_clones_csvpaths),
@@ -622,12 +612,6 @@ def analyse_view_clones_ts_fragments(args):
     df_agg_views = df_agg.drop(columns=["clones_unique", "clones_total"])
     df_agg_clones = df_agg.drop(columns=["views_unique", "views_total"])
 
-    # for melt, see https://github.com/altair-viz/altair/issues/968
-    # df_agg_views = df_agg.melt("time")
-    # print(df_agg)
-    ## .mark_area(color="lightblue", interpolate="step-after", line=True)
-
-    # PANEL_WIDTH = 360
     PANEL_WIDTH = "container"
     PANEL_HEIGHT = 200
 
@@ -721,26 +705,6 @@ def analyse_view_clones_ts_fragments(args):
         .properties(**panel_props)
     )
 
-    # chart_views_unique.configure_axisY(labelFlush=True, labelFlushOffset=100)
-
-    # alt.vconcat(
-    #     alt.hconcat(chart_clones_unique, chart_clones_total),
-    #     alt.hconcat(chart_views_unique, chart_views_total),
-    # ).resolve_scale(x="shared").save("chart.html")
-
-    # alt.hconcat(
-    #     alt.vconcat(chart_clones_unique, chart_clones_total)
-    #     .resolve_scale(x="shared")
-    #     .properties(title="Clones"),
-    #     alt.vconcat(chart_views_unique, chart_views_total)
-    #     .resolve_scale(x="shared")
-    #     .properties(title="Views"),
-    # ).save("chart.html", embed_options={"renderer": "svg"})
-
-    # https://github.com/altair-viz/altair/issues/1422#issuecomment-525866028
-    # chart.show()
-    # chart_clones_total.save("chart.html")
-
     chart_views_unique_spec = chart_views_unique.to_json(indent=None)
     chart_views_total_spec = chart_views_total.to_json(indent=None)
     chart_clones_unique_spec = chart_clones_unique.to_json(indent=None)
@@ -825,16 +789,16 @@ def add_stargazers_section(df):
     )
 
 
-def get_stars_over_time(args):
+def get_stars_over_time():
     # TODO: for ~10k stars repositories, this operation is too costly for doing
     # it as part of each analyzer invocation. Move this to the fetcher, and
     # persist the data.
-    log.info("fetch star time series for repo %s", args.repospec)
+    log.info("fetch star time series for repo %s", ARGS.repospec)
 
     hub = Github(
         login_or_token=os.environ["GHRS_GITHUB_API_TOKEN"].strip(), per_page=100
     )
-    repo = hub.get_repo(args.repospec)
+    repo = hub.get_repo(ARGS.repospec)
 
     reqlimit_before = hub.get_rate_limit().core.remaining
 
@@ -926,39 +890,25 @@ def parse_args():
     parser.add_argument("--outfile-prefix", default=TODAY + "_")
     args = parser.parse_args()
 
-    if "/" not in args.repospec:
+    if "/" not in ARGS.repospec:
         sys.exit("missing slash in REPOSITORY spec")
 
-    if os.path.exists(args.output_directory):
-        if not os.path.isdir(args.output_directory):
+    if os.path.exists(ARGS.output_directory):
+        if not os.path.isdir(ARGS.output_directory):
             log.error(
                 "The specified output directory path does not point to a directory: %s",
-                args.output_directory,
+                ARGS.output_directory,
             )
             sys.exit(1)
 
-        log.info("Remove output directory: %s", args.output_directory)
-        shutil.rmtree(args.output_directory)
+        log.info("Remove output directory: %s", ARGS.output_directory)
+        shutil.rmtree(ARGS.output_directory)
 
-    log.info("Create output directory: %s", args.output_directory)
-    os.makedirs(args.output_directory)
+    log.info("Create output directory: %s", ARGS.output_directory)
+    os.makedirs(ARGS.output_directory)
 
-    OUTDIR = args.output_directory
+    OUTDIR = ARGS.output_directory
     ARGS = args
-
-    return args
-
-
-def matplotlib_config():
-    plt.style.use("ggplot")
-    # import seaborn as sns
-
-    # make the gray background of gg plot a little lighter
-    plt.rcParams["axes.facecolor"] = "#eeeeee"
-    matplotlib.rcParams["figure.figsize"] = [10.5, 7.0]
-    matplotlib.rcParams["figure.dpi"] = 100
-    matplotlib.rcParams["savefig.dpi"] = 150
-    # mpl.rcParams['font.size'] = 12
 
 
 if __name__ == "__main__":

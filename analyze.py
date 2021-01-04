@@ -228,7 +228,7 @@ def gen_pandoc_html_template(target):
             """
             <style>
                 @media print {
-                  .pagebreak-for-print-for-print {
+                  .pagebreak-for-print {
                       clear: both;
                       page-break-after: always;
                    }
@@ -737,7 +737,7 @@ def analyse_view_clones_ts_fragments(args):
     #### Total views
     <div id="chart_views_total" class="full-width-chart"></div>
 
-    <div class="pagebreak-for-print-for-print"> </div>
+    <div class="pagebreak-for-print"> </div>
 
 
     ## Clones

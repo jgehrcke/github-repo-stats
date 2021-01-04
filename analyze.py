@@ -285,6 +285,18 @@ def top_x_snapshots_rename_columns(df):
         pass
 
 
+def _get_snapshot_time_from_path(p, basename_suffix):
+    # Expect each filename (basename) to have a prefix of format
+    # %Y-%m-%d_%H%M%S encoding the snapshot time (in UTC). Isolate that as
+    # tz-aware datetime object, return.
+    basename_prefix = os.path.basename(p).split(basename_suffix)[0]
+    t = pytz.timezone("UTC").localize(
+        datetime.strptime(basename_prefix, "%Y-%m-%d_%H%M%S")
+    )
+    log.info("parsed timestamp from path: %s", t)
+    return t
+
+
 def _get_snapshot_dfs(csvpaths, basename_suffix):
 
     snapshot_dfs = []
@@ -292,17 +304,9 @@ def _get_snapshot_dfs(csvpaths, basename_suffix):
 
     for p in csvpaths:
         log.info("attempt to parse %s", p)
-
-        # Expect each filename (basename) to have a prefix of format
-        # %Y-%m-%d_%H%M%S encoding the snapshot time (in UTC).
-        basename_prefix = os.path.basename(p).split(basename_suffix)[0]
-
-        snapshot_time = pytz.timezone("UTC").localize(
-            datetime.strptime(basename_prefix, "%Y-%m-%d_%H%M%S")
-        )
-        log.info("parsed timestamp from path: %s", snapshot_time)
-
+        snapshot_time = _get_snapshot_time_from_path(p, basename_suffix)
         df = pd.read_csv(p)
+
         # mutate column names in-place.
         top_x_snapshots_rename_columns(df)
 
@@ -358,20 +362,23 @@ def _build_entity_dfs(dfa, entity_type, unique_entity_names):
     return entity_dfs
 
 
-def analyse_top_x_snapshots(entity_type):
-    assert entity_type in ["referrer", "path"]
-
-    log.info("read 'top %s' snapshots (CSV docs)", entity_type)
-
-    basename_suffix = f"_top_{entity_type}s_snapshot.csv"
+def _glob_csvpaths(basename_suffix):
     basename_pattern = f"*{basename_suffix}"
-    csvpaths = glob.glob(os.path.join(ARGS.csvdir, basename_pattern))
+    csvpaths = glob.glob(os.path.join(ARGS.snapshotdir, basename_pattern))
     log.info(
         "number of CSV files discovered for %s: %s",
         basename_pattern,
         len(csvpaths),
     )
+    return csvpaths
 
+
+def analyse_top_x_snapshots(entity_type):
+    assert entity_type in ["referrer", "path"]
+
+    log.info("read 'top %s' snapshots (CSV docs)", entity_type)
+    basename_suffix = f"_top_{entity_type}s_snapshot.csv"
+    csvpaths = _glob_csvpaths(basename_suffix)
     snapshot_dfs = _get_snapshot_dfs(csvpaths, basename_suffix)
 
     # for df in snapshot_dfs:
@@ -555,56 +562,112 @@ def analyse_top_x_snapshots(entity_type):
 def analyse_view_clones_ts_fragments():
 
     log.info("read views/clones time series fragments (CSV docs)")
-    views_clones_csvpaths = glob.glob(os.path.join(ARGS.csvdir, "*views_clones*.csv"))
-    log.info(
-        "number of CSV files discovered for views/clones: %s",
-        len(views_clones_csvpaths),
-    )
+
+    basename_suffix = f"_views_clones_series_fragment.csv"
+    csvpaths = _glob_csvpaths(basename_suffix)
 
     dfs = []
     column_names_seen = set()
-    for p in views_clones_csvpaths:
+    for p in csvpaths:
         log.info("attempt to parse %s", p)
+        snapshot_time = _get_snapshot_time_from_path(p, basename_suffix)
 
         df = pd.read_csv(
             p,
             index_col=["time_iso8601"],
             date_parser=lambda col: pd.to_datetime(col, utc=True),
         )
+
+        # attach snapshot time as meta data prop to df
+        df.attrs["snapshot_time"] = snapshot_time
+
+        # The index is not of string type anymore, but of type
+        # `pd.DatetimeIndex`. Reflect that in the name.
+        df.index.rename("time", inplace=True)
+
         if column_names_seen and set(df.columns) != column_names_seen:
             log.error("columns seen so far: %s", column_names_seen)
             log.error("columns in %s: %s", p, df.columns)
             sys.exit(1)
 
         column_names_seen.update(df.columns)
+
+        df = df.sort_index()
+
+        # Sanity check: snapshot time _after_ latest timestamp in time series?
+        # This could hit in on a machine with a bad time setting when fetching
+        # data.
+        if df.index.max() > snapshot_time:
+            log.error(
+                "for CSV file %s the snapshot time %s is older than the newest sample",
+                p,
+                snapshot_time,
+            )
+            sys.exit(1)
+
         dfs.append(df)
 
     # for df in dfs:
     #     print(df)
 
     log.info("total sample count: %s", sum(len(df) for df in dfs))
+
+    newest_snapshot_time = max(df.attrs["snapshot_time"] for df in dfs)
+    log.info("time of newest snapshot: %s", newest_snapshot_time)
     log.info("build aggregate, drop duplicate data")
 
-    dfa = pd.concat(dfs)
-    dfa.sort_index(inplace=True)
+    # Each dataframe corresponds to one time series fragment ("snapshot")
+    # obtained from the GitHub API. Each time series fragment contains 15
+    # samples (rows), with two adjacent samples being 24 hours apart. Ideally,
+    # the time series fragments overlap in time. They overlap potentially by a
+    # lot, depending on when the individual snapshots were taken (think: take
+    # one snapshot per day; then 14 out of 15 data points are expected to be
+    # "the same" as in the snapshot taken the day before). Stich these
+    # fragments together (with a buch of "duplicate samples), and then sort
+    # this result by time.
+    dfall = pd.concat(dfs)
+    dfall.sort_index(inplace=True)
+    # print(dfall)
 
-    # Rename index (now of type `pd.DatetimeIndex`)
-    dfa.index.rename("time", inplace=True)
+    # Now, the goal is to drop duplicate data. And again, as of a lot of
+    # overlap between snapshots there's a lot of duplicate data to be expected.
+    # What does "duplicat data" mean? We expect that there are multiple samples
+    # from different snapshots with equivalent timestamp. OK, we should just
+    # take any one of them. They should all be the same, right? They are not
+    # all equivalent. I've found that at the boundaries of each time series
+    # fragment, the values returned by the GitHub API are subject to a
+    # non-obvious cutoff effect: for example, in a snapshot obtained on Dec 15,
+    # the sample for Dec 7 is within the mid part of the fragment and shows a
+    # value of 73 for `clones_total`. The snapshot obtained on Dec 21 has the
+    # sample for Dec 7 at the boundary (left-hand, towards the past), and that
+    # shows a value of 18 for `clones_total`. 73 vs 18 -- how is that possible?
+    # That's easily possible, assuming that GitHub uses a rolling window of 14
+    # days width with a precision higher than 1 day and after all the cutoff
+    # for the data points at the boundary depends on the _exact time_ when the
+    # snapshot was taken. That is, for aggregation (for dropping duplicate/bad
+    # data) we want to look for the maximum data value for any given timestamp.
+    # Using that method, we effectively ignore said cutoff artifact. In short:
+    # group by timestamp (index), take the maximum.
+    df_agg = dfall.groupby(dfall.index).max()
 
-    # print(dfa)
+    # Write aggregate
+    # agg_fname = (
+    #     datetime.strftime(newest_snapshot_time, "%Y-%m-%d_%H%M%S")
+    #     + "_views_clones_aggregate.csv"
+    # )
+    # agg_fpath = os.path.join(ARGS.snapshotdir, agg_fname)
+    if ARGS.views_clones_aggregate_outpath:
 
-    # drop_duplicates is too ignorant!
-    # df_agg.drop_duplicates(inplace=True, keep="last")
+        log.info("write aggregate to %s", ARGS.views_clones_aggregate_outpath)
+        df_agg.to_csv(ARGS.views_clones_aggregate_outpath)
 
-    # Each dataframe corresponds to one time series fragment obtained from the
-    # GitHub API. I've found that at the boundaries, the values returned by the
-    # API may be inconsistent. For example, in a snapshot obtained Dec 15 the
-    # sample for Dec 7 is within the mid part of the fragment and shows a value
-    # of 73 for `clones_total`. The snapshot obtained on Dec 21 has the Dec 7
-    # sample at the boundary towards the past, and that shows a value of 18 for
-    # `clones_total`. That is, for aggregation we have to look for the max data
-    # values for any given timestamp.
-    df_agg = dfa.groupby(dfa.index).max()
+        if ARGS.delete_ts_fragments:
+            # Iterate through precisely the set of files that was read above.
+            # If unlinkling fails at OS boundary then don't crash this program.
+            for p in csvpaths:
+                log.info("delete %s as of --delete-ts-fragments", p)
+                os.unlink(p)
+
     # print(df_agg)
 
     # matplotlib_config()
@@ -897,17 +960,47 @@ def parse_args():
     )
 
     parser.add_argument(
-        "csvdir", metavar="PATH", help="path to directory containing CSV files"
+        "snapshotdir",
+        metavar="PATH",
+        help="path to directory containing CSV files of data snapshots / time series fragments, obtained via fetch.py",
     )
 
     parser.add_argument("--pandoc-command", default="pandoc")
     parser.add_argument("--resources-directory", default="resources")
     parser.add_argument("--output-directory", default=TODAY + "_report")
     parser.add_argument("--outfile-prefix", default=TODAY + "_")
+
+    parser.add_argument(
+        "--views-clones-aggregate-outpath",
+        default="",
+        metavar="PATH",
+        help="Write aggregate CSV file from discovered time series snapshots",
+    )
+
+    parser.add_argument(
+        "--views-clones-aggregate-inpath",
+        default="",
+        metavar="PATH",
+        help="Read aggregate CSV file in addition to regular time series snapshots discovery",
+    )
+
+    parser.add_argument(
+        "--delete-ts-fragments",
+        default=False,
+        action="store_true",
+        help="Delete individual fragment CSV files after having written aggregate CSV file",
+    )
+
     args = parser.parse_args()
 
     if "/" not in args.repospec:
         sys.exit("missing slash in REPOSITORY spec")
+
+    if args.delete_ts_fragments:
+        if not args.views_clones_aggregate_outpath:
+            sys.exit(
+                "--delete-ts-fragments must only be set with --views-clones-aggregate-outpath"
+            )
 
     if os.path.exists(args.output_directory):
         if not os.path.isdir(args.output_directory):

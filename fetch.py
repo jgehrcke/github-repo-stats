@@ -183,8 +183,8 @@ def referrers_to_df(top_referrers):
     series_views_total = []
     for p in top_referrers:
         series_referrers.append(p.referrer)
-        series_views_total.append(p.count)
-        series_views_unique.append(p.uniques)
+        series_views_total.append(int(p.count))
+        series_views_unique.append(int(p.uniques))
 
     df = pd.DataFrame(
         data={
@@ -208,8 +208,8 @@ def paths_to_df(top_paths):
     series_views_total = []
     for p in top_paths:
         series_url_paths.append(p.path)
-        series_views_total.append(p.count)
-        series_views_unique.append(p.uniques)
+        series_views_total.append(int(p.count))
+        series_views_unique.append(int(p.uniques))
 
     df = pd.DataFrame(
         data={
@@ -240,8 +240,8 @@ def clones_or_views_to_df(items, metric):
         # `sample.timestamp` is a naive datetime object. Make it tz-aware.
         ts_aware = pytz.timezone("UTC").localize(sample.timestamp)
         series_timestamps.append(ts_aware)
-        series_count_total.append(sample.count)
-        series_count_unique.append(sample.uniques)
+        series_count_total.append(int(sample.count))
+        series_count_unique.append(int(sample.uniques))
 
     df = pd.DataFrame(
         data={

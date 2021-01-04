@@ -340,8 +340,8 @@ def analyse_top_x_snapshots(entity_type, args):
         column_names_seen.update(df.columns)
         snapshot_dfs.append(df)
 
-    for df in snapshot_dfs:
-        print(df)
+    # for df in snapshot_dfs:
+    #     print(df)
 
     # Keep in mind: an entity_type is either a top 'referrer', or a top 'path'.
     # Find all entities seen across snapshots, by their name. For type referrer
@@ -380,7 +380,7 @@ def analyse_top_x_snapshots(entity_type, args):
         edf = edf.drop(columns=["time"])
         edf.index = newindex
         edf = edf.sort_index()
-        print(edf)
+        # print(edf)
         entity_dfs[ename] = edf
 
     del ename
@@ -428,9 +428,9 @@ def analyse_top_x_snapshots(entity_type, args):
     df_top_vu = pd.DataFrame()
     for ename in top_n_enames:
         edf = entity_dfs[ename]
-        print(edf)
+        # print(edf)
         df_top_vu[ename] = edf["views_unique"]
-    del ename
+    # del ename
 
     log.info(
         "The top %s %ss based on unique views, for the entire time range seen:\n%s",
@@ -450,7 +450,7 @@ def analyse_top_x_snapshots(entity_type, args):
     df_melted = df_top_vu.melt(
         var_name=entity_type, value_name="views_unique", ignore_index=False
     ).reset_index()
-    print(df_melted)
+    # print(df_melted)
 
     # Normalize main metric to show a view count _per day_, and clarify in the
     # plot that this is a _mean_ value derived from the _last 14 days_.
@@ -551,8 +551,8 @@ def analyse_view_clones_ts_fragments(args):
         column_names_seen.update(df.columns)
         dfs.append(df)
 
-    for df in dfs:
-        print(df)
+    # for df in dfs:
+    #     print(df)
 
     log.info("total sample count: %s", sum(len(df) for df in dfs))
     log.info("build aggregate, drop duplicate data")

@@ -659,7 +659,7 @@ def analyse_view_clones_ts_fragments():
     if ARGS.views_clones_aggregate_outpath:
 
         log.info("write aggregate to %s", ARGS.views_clones_aggregate_outpath)
-        df_agg.to_csv(ARGS.views_clones_aggregate_outpath)
+        df_agg.to_csv(ARGS.views_clones_aggregate_outpath, index_label="time_iso8601")
 
         if ARGS.delete_ts_fragments:
             # Iterate through precisely the set of files that was read above.

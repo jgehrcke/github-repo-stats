@@ -91,7 +91,7 @@ python /analyze.py \
     --outfile-prefix "" \
     --views-clones-aggregate-outpath "ghrs-data/views_clones_aggregate.csv" \
     --views-clones-aggregate-inpath "ghrs-data/views_clones_aggregate.csv" \
-    --delete-ts-fragments
+    --delete-ts-fragments \
     "${STATS_REPOSPEC}" ghrs-data/snapshots
 ANALYZE_ECODE=$?
 set +x

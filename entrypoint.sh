@@ -71,12 +71,12 @@ echo "tree in $(pwd)/newdata:"
 tree newdata
 
 set -x
-mkdir -p ghrs-data-snapshots
-cp -a newdata/* ghrs-data-snapshots
+mkdir -p ghrs-data/snapshots
+cp -a newdata/* ghrs-data/snapshots
 
 # New data files: show them from git's point of view.
 git status --untracked=no --porcelain
-git add ghrs-data-snapshots
+git add ghrs-data/snapshots
 git commit -m "ghrs: snap ${UPDATE_ID} for ${STATS_REPOSPEC}"
 
 # Pragmatic method against interleaved stderr/out in GHA log viewer.
@@ -89,7 +89,10 @@ python /analyze.py \
     --resources-directory /resources \
     --output-directory latest-report \
     --outfile-prefix "" \
-    "${STATS_REPOSPEC}" ghrs-data-snapshots
+    --views-clones-aggregate-outpath "ghrs-data/views_clones_aggregate.csv" \
+    --views-clones-aggregate-inpath "ghrs-data/views_clones_aggregate.csv" \
+    --delete-ts-fragments
+    "${STATS_REPOSPEC}" ghrs-data/snapshots
 ANALYZE_ECODE=$?
 set +x
 
@@ -97,6 +100,11 @@ if [ $ANALYZE_ECODE -ne 0 ]; then
     echo "error: analyze.py returned with code ${ANALYZE_ECODE} -- exit."
     exit $ANALYZE_ECODE
 fi
+
+# Commit the changed view/clone aggregate, and the deletion of snapshot files
+git add ghrs-data/views_clones_aggregate.csv
+git add ghrs-data/snapshots
+git commit -m "ghrs: vc agg ${UPDATE_ID} for ${STATS_REPOSPEC}"
 
 echo "Translate HTML report into PDF, via headless Chrome"
 set -x

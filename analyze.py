@@ -595,6 +595,7 @@ def analyse_view_clones_ts_fragments():
 
     dfs = []
     column_names_seen = set()
+
     for p in csvpaths:
         log.info("attempt to parse %s", p)
         snapshot_time = _get_snapshot_time_from_path(p, basename_suffix)
@@ -640,19 +641,36 @@ def analyse_view_clones_ts_fragments():
     log.info("total sample count: %s", sum(len(df) for df in dfs))
 
     newest_snapshot_time = max(df.attrs["snapshot_time"] for df in dfs)
+
+    df_prev_agg = None
+    if ARGS.views_clones_aggregate_inpath:
+        log.info("read previous aggregate: %s", ARGS.views_clones_aggregate_inpath)
+        df_prev_agg = pd.read_csv(
+            ARGS.views_clones_aggregate_inpath,
+            index_col=["time_iso8601"],
+            date_parser=lambda col: pd.to_datetime(col, utc=True),
+        )
+        df_prev_agg.index.rename("time", inplace=True)
+
     log.info("time of newest snapshot: %s", newest_snapshot_time)
     log.info("build aggregate, drop duplicate data")
 
-    # Each dataframe corresponds to one time series fragment ("snapshot")
-    # obtained from the GitHub API. Each time series fragment contains 15
-    # samples (rows), with two adjacent samples being 24 hours apart. Ideally,
-    # the time series fragments overlap in time. They overlap potentially by a
-    # lot, depending on when the individual snapshots were taken (think: take
-    # one snapshot per day; then 14 out of 15 data points are expected to be
-    # "the same" as in the snapshot taken the day before). Stich these
-    # fragments together (with a buch of "duplicate samples), and then sort
-    # this result by time.
+    # Each dataframe in `dfs` corresponds to one time series fragment
+    # ("snapshot") obtained from the GitHub API. Each time series fragment
+    # contains 15 samples (rows), with two adjacent samples being 24 hours
+    # apart. Ideally, the time series fragments overlap in time. They overlap
+    # potentially by a lot, depending on when the individual snapshots were
+    # taken (think: take one snapshot per day; then 14 out of 15 data points
+    # are expected to be "the same" as in the snapshot taken the day before).
+    # Stich these fragments together (with a buch of "duplicate samples), and
+    # then sort this result by time.
+    log.info("pd.concat(dfs)")
     dfall = pd.concat(dfs)
+
+    if df_prev_agg is not None:
+        log.info("pd.concat(dfall, df_prev_agg)")
+        dfall = pd.concat([dfall, df_prev_agg])
+
     dfall.sort_index(inplace=True)
 
     log.info("shape of dataframe before dropping duplicates: %s", dfall.shape)
@@ -689,8 +707,19 @@ def analyse_view_clones_ts_fragments():
     # agg_fpath = os.path.join(ARGS.snapshotdir, agg_fname)
     if ARGS.views_clones_aggregate_outpath:
 
+        if os.path.exists(ARGS.views_clones_aggregate_outpath):
+            log.info("file exists: %s", ARGS.views_clones_aggregate_outpath)
+            if not ARGS.views_clones_aggregate_inpath:
+                log.error(
+                    "would overwrite output aggregate w/o reading input aggregate -- you know what you're doing?"
+                )
+                sys.exit(1)
+
         log.info("write aggregate to %s", ARGS.views_clones_aggregate_outpath)
-        df_agg.to_csv(ARGS.views_clones_aggregate_outpath, index_label="time_iso8601")
+        # Pragmatic strategy against partial write / encoding problems.
+        tpath = ARGS.views_clones_aggregate_outpath + ".tmp"
+        df_agg.to_csv(tpath, index_label="time_iso8601")
+        os.rename(tpath, ARGS.views_clones_aggregate_outpath)
 
         if ARGS.delete_ts_fragments:
             # Iterate through precisely the set of files that was read above.

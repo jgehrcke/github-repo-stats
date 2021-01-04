@@ -11,6 +11,9 @@ Switch to using https://github.com/jd/tenacity
 Note here when done:
 https://stackoverflow.com/questions/12850864/is-it-possible-to-track-views-and-clones-of-my-github-repositories
 
+
+Bake chromedriver into docker image
+
 Collect and visualize Forks-over-time
 
 

@@ -489,8 +489,15 @@ def analyse_top_x_snapshots(entity_type, args):
         alt.Chart(df_melted)
         .mark_line(point=True)
         # .encode(x="time:T", y="views_unique:Q", color="referrer:N")
+        # the pandas dataframe datetimeindex contains timing information at
+        # much higher resolution than 1 day. The resulting vega spec may
+        # then see time values like this: `"time": "2021-01-03T00:00:00+00:00"`
+        # -- suggesting to vega that we care about showing hours and minutes.
+        # instruct vega to only care about _days_ (dates), via an altair-based
+        # timeout unit transformation. Ref:
+        # https://altair-viz.github.io/user_guide/transform/timeunit.html
         .encode(
-            alt.X("time", type="temporal", title="date"),
+            alt.X("time", type="temporal", title="date", timeUnit="yearmonthdate"),
             alt.Y(
                 "views_unique_norm",
                 type="quantitative",
@@ -631,7 +638,7 @@ def analyse_view_clones_ts_fragments(args):
             alt.Chart(df_agg_clones)
             .mark_line(point=True)
             .encode(
-                alt.X("time", type="temporal", title="date"),
+                alt.X("time", type="temporal", title="date", timeUnit="yearmonthdate"),
                 alt.Y(
                     "clones_unique",
                     type="quantitative",
@@ -653,7 +660,7 @@ def analyse_view_clones_ts_fragments(args):
             alt.Chart(df_agg_clones)
             .mark_line(point=True)
             .encode(
-                alt.X("time", type="temporal", title="date"),
+                alt.X("time", type="temporal", title="date", timeUnit="yearmonthdate"),
                 alt.Y(
                     "clones_total",
                     type="quantitative",
@@ -675,7 +682,7 @@ def analyse_view_clones_ts_fragments(args):
             alt.Chart(df_agg_views)
             .mark_line(point=True)
             .encode(
-                alt.X("time", type="temporal", title="date"),
+                alt.X("time", type="temporal", title="date", timeUnit="yearmonthdate"),
                 alt.Y(
                     "views_unique",
                     type="quantitative",
@@ -697,7 +704,7 @@ def analyse_view_clones_ts_fragments(args):
             alt.Chart(df_agg_views)
             .mark_line(point=True)
             .encode(
-                alt.X("time", type="temporal", title="date"),
+                alt.X("time", type="temporal", title="date", timeUnit="yearmonthdate"),
                 alt.Y(
                     "views_total",
                     type="quantitative",

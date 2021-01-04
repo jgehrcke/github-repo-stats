@@ -606,6 +606,29 @@ def analyse_view_clones_ts_fragments():
             date_parser=lambda col: pd.to_datetime(col, utc=True),
         )
 
+        # A time series fragment might look like this:
+        #
+        # df_views_clones:
+        #                            clones_total  ...  views_unique
+        # time_iso8601                             ...
+        # 2020-12-21 00:00:00+00:00           NaN  ...             2
+        # 2020-12-22 00:00:00+00:00           2.0  ...            23
+        # 2020-12-23 00:00:00+00:00           2.0  ...            20
+        # ...
+        # 2021-01-03 00:00:00+00:00           8.0  ...            21
+        # 2021-01-04 00:00:00+00:00           7.0  ...            18
+        #
+        # Note the NaN and the floaty type.
+
+        # All metrics are known to be integers by definition here. The NaN are
+        # expected only at the boundaries of each fragment (first and maybe
+        # last sample). Drop the rows where at least one element is missing,
+        # and make sure numbers are treated as integers from here on (this
+        # actually matters (in a cosmetic way) only for outputting the
+        # aggregate CSV later on -- not for plotting, etc).
+        df = df.dropna()
+        df = df.astype(int)
+
         # attach snapshot time as meta data prop to df
         df.attrs["snapshot_time"] = snapshot_time
 
@@ -720,10 +743,6 @@ def analyse_view_clones_ts_fragments():
                     "would overwrite output aggregate w/o reading input aggregate -- you know what you're doing?"
                 )
                 sys.exit(1)
-
-        # Some older fragment files might contain floaty values. All metrics
-        # are known to be integers by definition here.
-        df_agg = df_agg.astype(int)
 
         log.info("write aggregate to %s", ARGS.views_clones_aggregate_outpath)
         # Pragmatic strategy against partial write / encoding problems.

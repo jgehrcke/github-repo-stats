@@ -331,6 +331,9 @@ def _get_snapshot_dfs(csvpaths, basename_suffix):
 
 def _build_entity_dfs(dfa, entity_type, unique_entity_names):
 
+    cmn_ename_prefix = os.path.commonprefix(list(unique_entity_names))
+    log.info("cmn_ename_prefix: %s", cmn_ename_prefix)
+
     entity_dfs = {}
     for ename in unique_entity_names:
         log.info("create dataframe for %s: %s", entity_type, ename)
@@ -339,8 +342,21 @@ def _build_entity_dfs(dfa, entity_type, unique_entity_names):
         # Now use datetime column as index
         newindex = edf["time"]
         edf = edf.drop(columns=["time"])
+
         edf.index = newindex
         edf = edf.sort_index()
+
+        # Do entity name processing
+        if entity_type == "path":
+            entity_name_transformed = ename[len(cmn_ename_prefix) :]
+            # The root path (e.g., `owner/repo`) is now an empty string. That's
+            # not so cool, make the root be represented by a single slash.
+            if entity_name_transformed == "":
+                entity_name_transformed = "/"
+            edf.rename(columns={ename: entity_name_transformed}, inplace=True)
+            # Also change `ename` from here on, so that `entity_dfs` is built
+            # up using the transformed ename.
+            ename = entity_name_transformed
 
         # Make it so that there is at most one data point per day, in case
         # individual snapshots were taken with higher frequency.
@@ -486,16 +502,16 @@ def analyse_top_x_snapshots(entity_type):
 
     # For paths, it's relevant to identify the common prefix (repo owner/name)
 
-    cmn_ename_prefix = os.path.commonprefix(list(unique_entity_names))
-    log.info("cmn_ename_prefix: %s", cmn_ename_prefix)
+    # cmn_ename_prefix = os.path.commonprefix(list(unique_entity_names))
+    # log.info("cmn_ename_prefix: %s", cmn_ename_prefix)
 
-    if entity_type == "path":
-        log.info("remove common path prefix")
-        df_melted["path"] = df_melted["path"].str.slice(start=len(cmn_ename_prefix))
-        # The root path (e.g., `owner/repo`) is not an empty string. That's
-        # not so cool, make the root be represented by a single slash.
-        # df_melted[df_melted["path"] == ""]["path"] = "/"
-        df_melted["path"].replace("", "/", inplace=True)
+    # if entity_type == "path":
+    #     log.info("remove common path prefix")
+    #     df_melted["path"] = df_melted["path"].str.slice(start=len(cmn_ename_prefix))
+    #     # The root path (e.g., `owner/repo`) is not an empty string. That's
+    #     # not so cool, make the root be represented by a single slash.
+    #     # df_melted[df_melted["path"] == ""]["path"] = "/"
+    #     df_melted["path"].replace("", "/", inplace=True)
 
     panel_props = {"height": 300, "width": "container", "padding": 10}
     chart = (
@@ -541,14 +557,25 @@ def analyse_top_x_snapshots(entity_type):
 
     heading = "Top referrers" if entity_type == "referrer" else "Top paths"
 
+    # Textual form: larger N, and no cutoff (arbitrary length and legend of
+    # plot don't go well with each other).
+    top_n = 15
+    top_n_enames = list(sorted_dict.keys())[:top_n]
+    top_n_enames_string_for_md = ", ".join(
+        f"{str(i).zfill(2)}: `{n}`" for i, n in enumerate(top_n_enames, 1)
+    )
+
     MD_REPORT.write(
         textwrap.dedent(
             f"""
+
 
     ## {heading}
 
 
     <div id="chart_{entity_type}s_top_n_alltime" class="full-width-chart"></div>
+
+    Top {top_n} {entity_type}s: {top_n_enames_string_for_md}
 
 
     """

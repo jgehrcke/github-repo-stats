@@ -96,6 +96,28 @@ python /pdf.py latest-report/report_for_pdf.html latest-report/report.pdf
 # Add directory contents (markdown, HTML, PDF).
 git add latest-report
 git commit -m "ghrs: report ${UPDATE_ID} for ${STATS_REPOSPEC}"
+
+
+cat << EOF > README.md
+Directory managed by https://github.com/jgehrcke/github-repo-stats.
+
+Name of the workflow that created this file: ${GITHUB_WORKFLOW}
+
+Latest report PDF: [report.pdf](https://github.com/${DATA_REPOSPEC}/raw/${DATA_BRANCH_NAME}/${STATS_REPOSPEC}/latest-report/report.pdf)
+EOF
+
+# If the GitHub pages prefix is set in the action config then add a link to
+# the HTML report to the README.
+
+if [[ "${INPUT_GHPAGESPREFIX}" != "none" ]]; then
+
+cat << EOF >> README.md
+
+Latest report HTML via GitHub pages: [report.html](${INPUT_GHPAGESPREFIX}/${STATS_REPOSPEC}/latest-report/report.html)
+EOF
+
+fi
+
 git push --set-upstream origin "${DATA_BRANCH_NAME}"
 
 # Ignore GCS approach for now.

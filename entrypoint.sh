@@ -95,9 +95,8 @@ python /pdf.py latest-report/report_for_pdf.html latest-report/report.pdf
 
 # Add directory contents (markdown, HTML, PDF).
 git add latest-report
-git commit -m "ghrs: report ${UPDATE_ID} for ${STATS_REPOSPEC}"
 
-
+echo "generate README.md"
 cat << EOF > README.md
 Directory managed by https://github.com/jgehrcke/github-repo-stats.
 
@@ -118,6 +117,8 @@ EOF
 
 fi
 
+git add README.md
+git commit -m "ghrs: report ${UPDATE_ID} for ${STATS_REPOSPEC}"
 git push --set-upstream origin "${DATA_BRANCH_NAME}"
 
 # Ignore GCS approach for now.

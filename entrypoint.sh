@@ -79,23 +79,33 @@ git status --untracked=no --porcelain
 git add ghrs-data-snapshots
 git commit -m "ghrs: snap ${UPDATE_ID} for ${STATS_REPOSPEC}"
 
+# Pragmatic method against interleaved stderr/out in GHA log viewer.
+set +x
+sleep 1
 
 echo "Generate new HTML report"
+set -x
 python /analyze.py \
     --resources-directory /resources \
     --output-directory latest-report \
     --outfile-prefix "" \
     "${STATS_REPOSPEC}" ghrs-data-snapshots
+ANALYZE_ECODE=$?
+set +x
 
+if [ $ANALYZE_ECODE -ne 0 ]; then
+    echo "error: analyze.py returned with code ${ANALYZE_ECODE} -- exit."
+    exit $ANALYZE_ECODE
+fi
 
-stat latest-report/report_for_pdf.html
-
-echo "Translate HTML report into PDF with headless Chrome"
+echo "Translate HTML report into PDF, via headless Chrome"
+set -x
 python /pdf.py latest-report/report_for_pdf.html latest-report/report.pdf
 
 # Add directory contents (markdown, HTML, PDF).
 git add latest-report
 
+set +x
 echo "generate README.md"
 cat << EOF > README.md
 ## github-repo-stats for ${STATS_REPOSPEC}
@@ -120,6 +130,7 @@ EOF
 
 fi
 
+set -x
 git add README.md
 git commit -m "ghrs: report ${UPDATE_ID} for ${STATS_REPOSPEC}"
 git push --set-upstream origin "${DATA_BRANCH_NAME}"

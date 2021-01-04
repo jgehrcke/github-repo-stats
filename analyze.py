@@ -285,19 +285,7 @@ def top_x_snapshots_rename_columns(df):
         pass
 
 
-def analyse_top_x_snapshots(entity_type):
-    assert entity_type in ["referrer", "path"]
-
-    log.info("read 'top %s' snapshots (CSV docs)", entity_type)
-
-    basename_suffix = f"_top_{entity_type}s_snapshot.csv"
-    basename_pattern = f"*{basename_suffix}"
-    csvpaths = glob.glob(os.path.join(ARGS.csvdir, basename_pattern))
-    log.info(
-        "number of CSV files discovered for %s: %s",
-        basename_pattern,
-        len(csvpaths),
-    )
+def _get_snapshot_dfs(csvpaths, basename_suffix):
 
     snapshot_dfs = []
     column_names_seen = set()
@@ -318,48 +306,27 @@ def analyse_top_x_snapshots(entity_type):
         # mutate column names in-place.
         top_x_snapshots_rename_columns(df)
 
+        # attach snapshot time as meta data prop to df
+        df.attrs["snapshot_time"] = snapshot_time
+
+        # Add new column to each dataframe: `time`, with the same value for
+        # every row: the snapshot time.
+        df["time"] = snapshot_time
+
         if column_names_seen and set(df.columns) != column_names_seen:
             log.error("columns seen so far: %s", column_names_seen)
             log.error("columns in %s: %s", p, df.columns)
             log.error("inconsistent set of column names across CSV files")
             sys.exit(1)
 
-        # attach snapshot time as meta data prop to df
-        df.attrs["snapshot_time"] = snapshot_time
-
         column_names_seen.update(df.columns)
         snapshot_dfs.append(df)
 
-    # for df in snapshot_dfs:
-    #     print(df)
+    return snapshot_dfs
 
-    # Keep in mind: an entity_type is either a top 'referrer', or a top 'path'.
-    # Find all entities seen across snapshots, by their name. For type referrer
-    # a specific entity(referrer) name might be `github.com`.
-    unique_entity_names = set()
-    for df in snapshot_dfs:
-        unique_entity_names.update(df[entity_type].values)
-    del df
 
-    log.info("all %s entities seen: %s", entity_type, unique_entity_names)
+def _build_entity_dfs(dfa, entity_type, unique_entity_names):
 
-    # Add bew column to each dataframe: `time`, with the same value for every
-    # row: the snapshot time.
-    for df in snapshot_dfs:
-        df["time"] = df.attrs["snapshot_time"]
-    del df
-
-    # Clarification: each snapshot dataframe corresponds to a single point in
-    # time (the snapshot time) and contains information about multiple top
-    # referrers/paths. Now, invert that structure: work towards individual
-    # dataframes where each dataframe corresponds to a single referrer/path,
-    # and contains imformation about multiple timestamps
-
-    # First, create a dataframe containing all information.
-    dfa = pd.concat(snapshot_dfs)
-
-    # Build a dict: key is referrer name, and value is DF with corresponding
-    # raw time series.
     entity_dfs = {}
     for ename in unique_entity_names:
         log.info("create dataframe for %s: %s", entity_type, ename)
@@ -388,8 +355,57 @@ def analyse_top_x_snapshots(entity_type):
         # print(edf)
         entity_dfs[ename] = edf
 
-    del ename
-    del edf
+    return entity_dfs
+
+
+def analyse_top_x_snapshots(entity_type):
+    assert entity_type in ["referrer", "path"]
+
+    log.info("read 'top %s' snapshots (CSV docs)", entity_type)
+
+    basename_suffix = f"_top_{entity_type}s_snapshot.csv"
+    basename_pattern = f"*{basename_suffix}"
+    csvpaths = glob.glob(os.path.join(ARGS.csvdir, basename_pattern))
+    log.info(
+        "number of CSV files discovered for %s: %s",
+        basename_pattern,
+        len(csvpaths),
+    )
+
+    snapshot_dfs = _get_snapshot_dfs(csvpaths, basename_suffix)
+
+    # for df in snapshot_dfs:
+    #     print(df)
+
+    # Keep in mind: an entity_type is either a top 'referrer', or a top 'path'.
+    # Find all entities seen across snapshots, by their name. For type referrer
+    # a specific entity(referrer) name might be `github.com`.
+
+    def _get_uens(snapshot_dfs):
+        unique_entity_names = set()
+        for df in snapshot_dfs:
+            unique_entity_names.update(df[entity_type].values)
+
+        return unique_entity_names
+
+    unique_entity_names = _get_uens(snapshot_dfs)
+    log.info("all %s entities seen: %s", entity_type, unique_entity_names)
+
+    # Clarification: each snapshot dataframe corresponds to a single point in
+    # time (the snapshot time) and contains information about multiple top
+    # referrers/paths. Now, invert that structure: work towards individual
+    # dataframes where each dataframe corresponds to a single referrer/path,
+    # and contains imformation about multiple timestamps
+
+    # First, create a dataframe containing all information.
+    dfa = pd.concat(snapshot_dfs)
+
+    if len(dfa) == 0:
+        log.info("leave early: no data for entity of type %s", entity_type)
+
+    # Build a dict: key is path/referrer name, and value is DF with
+    # corresponding raw time series.
+    entity_dfs = _build_entity_dfs(dfa, entity_type, unique_entity_names)
 
     # It's important to clarify what each data point in a per-referrer raw time
     # series means. Each data point has been returned by the GitHub traffic
@@ -890,24 +906,24 @@ def parse_args():
     parser.add_argument("--outfile-prefix", default=TODAY + "_")
     args = parser.parse_args()
 
-    if "/" not in ARGS.repospec:
+    if "/" not in args.repospec:
         sys.exit("missing slash in REPOSITORY spec")
 
-    if os.path.exists(ARGS.output_directory):
-        if not os.path.isdir(ARGS.output_directory):
+    if os.path.exists(args.output_directory):
+        if not os.path.isdir(args.output_directory):
             log.error(
                 "The specified output directory path does not point to a directory: %s",
-                ARGS.output_directory,
+                args.output_directory,
             )
             sys.exit(1)
 
-        log.info("Remove output directory: %s", ARGS.output_directory)
-        shutil.rmtree(ARGS.output_directory)
+        log.info("Remove output directory: %s", args.output_directory)
+        shutil.rmtree(args.output_directory)
 
-    log.info("Create output directory: %s", ARGS.output_directory)
-    os.makedirs(ARGS.output_directory)
+    log.info("Create output directory: %s", args.output_directory)
+    os.makedirs(args.output_directory)
 
-    OUTDIR = ARGS.output_directory
+    OUTDIR = args.output_directory
     ARGS = args
 
 

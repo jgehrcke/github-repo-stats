@@ -627,6 +627,8 @@ def analyse_view_clones_ts_fragments():
     # this result by time.
     dfall = pd.concat(dfs)
     dfall.sort_index(inplace=True)
+
+    log.info("shape of dataframe before dropping duplicates: %s", dfall.shape)
     # print(dfall)
 
     # Now, the goal is to drop duplicate data. And again, as of a lot of
@@ -649,6 +651,8 @@ def analyse_view_clones_ts_fragments():
     # Using that method, we effectively ignore said cutoff artifact. In short:
     # group by timestamp (index), take the maximum.
     df_agg = dfall.groupby(dfall.index).max()
+
+    log.info("shape of dataframe after dropping duplicates: %s", df_agg.shape)
 
     # Write aggregate
     # agg_fname = (
@@ -875,7 +879,7 @@ def get_stars_over_time():
     # TODO: for ~10k stars repositories, this operation is too costly for doing
     # it as part of each analyzer invocation. Move this to the fetcher, and
     # persist the data.
-    log.info("fetch star time series for repo %s", ARGS.repospec)
+    log.info("fetch stargazer time series for repo %s", ARGS.repospec)
 
     hub = Github(
         login_or_token=os.environ["GHRS_GITHUB_API_TOKEN"].strip(), per_page=100

@@ -139,7 +139,7 @@ def report_pdf_pagebreak():
 
 
 def finalize_and_render_report(args):
-    md_report_filepath = os.path.join(OUTDIR, TODAY + "_report.md")
+    md_report_filepath = os.path.join(OUTDIR, f"{ARGS.outfile_prefix}report.md")
     log.info("Write generated Markdown report to: %s", md_report_filepath)
     with open(md_report_filepath, "wb") as f:
         f.write(MD_REPORT.getvalue().encode("utf-8"))
@@ -885,6 +885,7 @@ def parse_args():
     parser.add_argument("--pandoc-command", default="pandoc")
     parser.add_argument("--resources-directory", default="resources")
     parser.add_argument("--output-directory", default=TODAY + "_report")
+    parser.add_argument("--outfile-prefix", default=TODAY + "_")
     args = parser.parse_args()
 
     if "/" not in args.repospec:

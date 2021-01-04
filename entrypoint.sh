@@ -98,11 +98,14 @@ git add latest-report
 
 echo "generate README.md"
 cat << EOF > README.md
-Directory managed by https://github.com/jgehrcke/github-repo-stats.
+## github-repo-stats for ${STATS_REPOSPEC}
 
-Name of the workflow that created this file: ${GITHUB_WORKFLOW}
+- statistics for repository https://github.com/${STATS_REPOSPEC}
+- managed by GitHub Action: https://github.com/jgehrcke/github-repo-stats
+- workflow that created this file: \`${GITHUB_WORKFLOW}\`
 
-Latest report PDF: [report.pdf](https://github.com/${DATA_REPOSPEC}/raw/${DATA_BRANCH_NAME}/${STATS_REPOSPEC}/latest-report/report.pdf)
+**Latest report PDF**: [report.pdf](https://github.com/${DATA_REPOSPEC}/raw/${DATA_BRANCH_NAME}/${STATS_REPOSPEC}/latest-report/report.pdf)
+
 EOF
 
 # If the GitHub pages prefix is set in the action config then add a link to
@@ -112,7 +115,7 @@ if [[ "${INPUT_GHPAGESPREFIX}" != "none" ]]; then
 
 cat << EOF >> README.md
 
-Latest report HTML via GitHub pages: [report.html](${INPUT_GHPAGESPREFIX}/${STATS_REPOSPEC}/latest-report/report.html)
+**Latest report HTML via GitHub pages**: [report.html](${INPUT_GHPAGESPREFIX}/${STATS_REPOSPEC}/latest-report/report.html)
 EOF
 
 fi

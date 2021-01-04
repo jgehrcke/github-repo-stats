@@ -83,7 +83,7 @@ git commit -m "ghrs: snap ${UPDATE_ID} for ${STATS_REPOSPEC}"
 set +x
 sleep 1
 
-echo "Generate new HTML report"
+echo "Parse data files, perform aggregation and analysis, generate Markdown report and render as HTML"
 set -x
 python /analyze.py \
     --resources-directory /resources \

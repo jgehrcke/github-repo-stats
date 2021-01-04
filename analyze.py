@@ -380,6 +380,21 @@ def analyse_top_x_snapshots(entity_type, args):
         edf = edf.drop(columns=["time"])
         edf.index = newindex
         edf = edf.sort_index()
+
+        # Make it so that there is at most one data point per day, in case
+        # individual snapshots were taken with higher frequency.
+        n_hour_bins = 24
+        log.info("len(edf): %s", len(edf))
+        log.info("downsample entity DF into %s-hour bins", n_hour_bins)
+        # Resample the DF into N-hour bins. Take max() for each group. Do
+        # `dropna()` on the resampler to remove all up-sampled data points (in
+        # case snapshots were taken at much lower frequency). Default behavior
+        # of the resampling operation is to note the value for each bin at the
+        # left edge of the bin, and to have the bin be closed on the left edge
+        # (right edge of the bin belongs to next bin).
+        edf = edf.resample(f"{n_hour_bins}h").max().dropna()
+        log.info("len(edf): %s", len(edf))
+
         # print(edf)
         entity_dfs[ename] = edf
 

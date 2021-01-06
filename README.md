@@ -1,20 +1,116 @@
 # github-repo-stats
 
-Input:
+A GitHub Action to periodically observe a target repository and generate a report for it.
 
-- `GHRS_GITHUB_API_TOKEN` (sensitive): for reading the repo stats. Must be set if data repository is different from stats repository.
+The primary purpose of this Action is to overcome the [14-day limitation](https://github.com/isaacs/github/issues/399) of GitHub's built-in traffic statistics.
 
-- `GHRS_DATA_BRANCH`: branch for pushing data and report to. Defaults to `github-repo-stats`.
+**Demo:**
 
-The API token used for pushing data to the data repo defaults to `github.token`.
+* [HTML report](https://jgehrcke.github.io/ghrs-test/jgehrcke/covid-19-germany-gae/latest-report/report.html)
+* [PDF report](https://jgehrcke.github.io/ghrs-test/jgehrcke/covid-19-germany-gae/latest-report/report.pdf)
 
-Default behavior:
+(generated for [jgehrcke/covid-19-germany-gae](https://github.com/jgehrcke/covid-19-germany-gae))
 
-- Data is persisted and reports are written to the `GHRS_DATA_BRANCH` in your repository.
+**Highlights:**
+
+* The report is generated as an HTML document, with a plotting solution based on [Altair](https://github.com/altair-viz/altair)/[Vega](https://vega.github.io/vega/).
+* The report is also generated as a PDF document, using a headless browser.
+* As we're using the Vega SVG renderer, the PDF report contains vector graphics.
+* Data updates and aggregation results are stored in standardized CSV files in the git repository that you install this Action in. No cloud storage or database needed. And you keep transparent history for data updates.
+* The observed repository (the one to build the report for) can be different from the repository you install this Action in.
+* Careful data handling: there are a number of traps when aggregating data based on what the GitHub Traffic API returns. This project tries to not fall for them
+
+
+**The report contains:**
+
+* Traffic stats:
+  * Unique and total views per day
+  * Unique and total clones per day
+  * Top referrers (where people come from when they land in your repository)
+  * Top paths (what people like to look at in your repository)
+* Evolution of stargazers
+* Evolution of forks
+
+
+
+
+## Documentation
+
+### "stats repository" vs. "data repository"
+
+* The "stats repository" is the repository to fetch stats for and to generate the report for.
+* The "data repository" is the repository to store data and report files in.
+
+These two repositories can be the same. But they don't have to be :-).
+
+That is, you can for example set up this Action in a private repository but have it observe  public repository.
+
+Data is persisted and reports are written to the `GHRS_DATA_BRANCH` in the data repository.
 
 It's recommended you create `GHRS_DATA_BRANCH` and delete all files from that branch before setting up GHRS for your reposistory, so that GHRS operates on a tidy environment.
 
-For GCS support (optional)
 
-- `GHRS_GCS_SVC_ACC_JSON` (secret): for writing to GCS
-- `GHRS_GCS_BUCKET_NAME` (non-sensitive, but can be in a secret, too): for writing to GCS
+### Setup
+
+Create a GitHub Actions workflow file (for example `.github/workflows/github-repo-stats.yml`) with for example the following contents:
+
+```yaml
+ cat
+on:
+  schedule:
+    # Run this once per day (hours in UTC time zone).
+    - cron: "* 7 * * *"
+  workflow_dispatch: # Allow for running this manually.
+
+jobs:
+  j1:
+    name: github-repo-stats
+    runs-on: ubuntu-latest
+    steps:
+      - name: GHRS
+        uses: jgehrcke/github-repo-stats@HEAD
+        with:
+          # Define the target repository, the repo to fetch
+          # stats for and to generate the report for.
+          # Leave this undefined when stats repository
+          # and data repository should be the same.
+          repository: jgehrcke/covid-19-germany-gae
+          # Required token privileges: Can read the target
+          # repo, and can push to the repository this
+          # workflow file lives in (to store data and
+          # the report files).
+          ghtoken: ${{ secrets.ghrs_github_api_token }}
+
+```
+
+
+### Input parameter reference
+
+Extract from `action.yml`:
+
+```yaml
+  repository:
+    description: >
+      Repository spec (<owner-or-org>/<reponame>) for the repository to fetch
+      statistics for.
+    default: ${{ github.repository }}
+  ghtoken:
+    description: >
+      GitHub API token for reading repo stats and for interacting with the data
+      repo (must be set if repo to fetch stats for is not the data repo).
+    default: ${{ github.token }}
+  databranch:
+    description: >
+      Data branch: Branch to push data to (in the data repo).
+    default: github-repo-stats
+  ghpagesprefix:
+    description: >
+      Set this if the data branch in the data repo is exposed via GitHub pages.
+      Must not end with a slash. Example: https://jgehrcke.github.io/ghrs-test
+    default: none
+```
+
+## Resources
+
+* [GitHub Traffic API docs](https://docs.github.com/en/free-pro-team@latest/rest/reference/repos#traffic)
+* [Do your own views count?](https://stackoverflow.com/a/63697886/145400)

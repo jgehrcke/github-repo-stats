@@ -88,13 +88,12 @@ def main():
     analyse_view_clones_ts_fragments()
     report_pdf_pagebreak()
 
+    add_stargazers_section(df_stargazers, sf_date_axis_lim)
+    add_fork_section(df_forks, sf_date_axis_lim)
+    report_pdf_pagebreak()
+
     analyse_top_x_snapshots("referrer")
     analyse_top_x_snapshots("path")
-
-    report_pdf_pagebreak()
-    add_stargazers_section(df_stargazers, sf_date_axis_lim)
-
-    add_fork_section(df_forks, sf_date_axis_lim)
 
     gen_report_footer()
     finalize_and_render_report()

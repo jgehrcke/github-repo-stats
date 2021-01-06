@@ -18,9 +18,10 @@ The primary purpose of this Action is to overcome the [14-day limitation](https:
 
 * The report is generated in two formats: HTML, PDF.
 * Plots are based on [Altair](https://github.com/altair-viz/altair)/[Vega](https://vega.github.io/vega/).
-* The PDF report contains vector graphics (charts are rendered with SVG elements in browser, PDF is generated with a headless browser).
+* The PDF report contains vector graphics.
 * Data updates, aggregation results, and report files are stored in the git repository that you install this Action in: this Action commits changes to a special branch. No cloud storage or database needed. As a result, you have complete and transparent history for data updates and reports, with clear commit messages, in a single place.
 * The observed repository (the one to build the report for) can be different from the repository you install this Action in.
+* The HTML report can be served right away via GitHub pages (that is how the demo above works).
 * Careful data analysis: there are a number of traps ([example](https://github.com/jgehrcke/github-repo-stats/blob/5fefc527288995e2e7e35593db496451580f51db/analyze.py#L748)) when aggregating data based on what the GitHub Traffic API returns. This project tries to not fall for them. One goal of this project is to perform [advanced analysis](https://github.com/jgehrcke/github-repo-stats/blob/5fefc527288995e2e7e35593db496451580f51db/analyze.py#L478) where possible.
 
 

@@ -1,9 +1,3 @@
-GCS support, use
-https://cloud.google.com/storage/docs/gsutil/commands/rsync
-
-S3 support use
-https://docs.aws.amazon.com/cli/latest/reference/s3/sync.html
-
 Use https://github.com/arzzen/git-quick-stats
 
 Switch to using https://github.com/jd/tenacity
@@ -11,11 +5,9 @@ Switch to using https://github.com/jd/tenacity
 Note here when done:
 https://stackoverflow.com/questions/12850864/is-it-possible-to-track-views-and-clones-of-my-github-repositories
 
-
 Bake chromedriver into docker image
 
 Collect and visualize Forks-over-time
-
 
 The HTML view shows detail about referrers
 graphs/traffic?referrer=govdata.de

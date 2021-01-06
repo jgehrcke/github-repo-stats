@@ -1,24 +1,27 @@
 # github-repo-stats
 
-A GitHub Action to periodically observe a target repository and generate a report for it.
+A GitHub Action to periodically inspect a target repository and generate a report for it.
 
 The primary purpose of this Action is to overcome the [14-day limitation](https://github.com/isaacs/github/issues/399) of GitHub's built-in traffic statistics.
 
-**Demo:**
+## Demo
 
-* [HTML report](https://jgehrcke.github.io/ghrs-test/jgehrcke/covid-19-germany-gae/latest-report/report.html)
-* [PDF report](https://jgehrcke.github.io/ghrs-test/jgehrcke/covid-19-germany-gae/latest-report/report.pdf)
+* Report:
+  * [HTML report](https://jgehrcke.github.io/ghrs-test/jgehrcke/covid-19-germany-gae/latest-report/report.html)
+  * [PDF report](https://jgehrcke.github.io/ghrs-test/jgehrcke/covid-19-germany-gae/latest-report/report.pdf)
+* Action setup (how the above's report is generated):
+  * [Workflow file](https://github.com/jgehrcke/ghrs-test/blob/github-repo-stats/.github/workflows/github-repo-stats.yml)
+  * [Data branch](https://github.com/jgehrcke/ghrs-test/tree/github-repo-stats/jgehrcke/covid-19-germany-gae)
 
-(generated for [jgehrcke/covid-19-germany-gae](https://github.com/jgehrcke/covid-19-germany-gae))
 
-**Highlights:**
+## Features
 
 * The report is generated as an HTML document, with a plotting solution based on [Altair](https://github.com/altair-viz/altair)/[Vega](https://vega.github.io/vega/).
-* The report is also generated as a PDF document, using a headless browser.
-* As we're using the Vega SVG renderer, the PDF report contains vector graphics.
-* Data updates and aggregation results are stored in standardized CSV files in the git repository that you install this Action in. No cloud storage or database needed. And you keep transparent history for data updates.
+* The report is also generated as a PDF document from the HTML document, using a headless browser.
+* Charts are rendered with SVG elements, and therefore the PDF report contains vector graphics, too.
+* Data updates, aggregation results, and report files are stored in the git repository that you install this Action in: this Action commits changes to a special branch. No cloud storage or database needed. As a result, you have complete and transparent history for data updates and reports, with clear commit messages, in a single place.
 * The observed repository (the one to build the report for) can be different from the repository you install this Action in.
-* Careful data handling: there are a number of traps when aggregating data based on what the GitHub Traffic API returns. This project tries to not fall for them
+* Careful data handling: there are a number of traps when aggregating data based on what the GitHub Traffic API returns. This project tries to not fall for them.
 
 
 **The report contains:**
@@ -32,11 +35,9 @@ The primary purpose of this Action is to overcome the [14-day limitation](https:
 * Evolution of forks
 
 
-
-
 ## Documentation
 
-### "stats repository" vs. "data repository"
+### Clarification: "stats repository" vs. "data repository"
 
 * The "stats repository" is the repository to fetch stats for and to generate the report for.
 * The "data repository" is the repository to store data and report files in.
@@ -45,17 +46,14 @@ These two repositories can be the same. But they don't have to be :-).
 
 That is, you can for example set up this Action in a private repository but have it observe  public repository.
 
-Data is persisted and reports are written to the `GHRS_DATA_BRANCH` in the data repository.
-
-It's recommended you create `GHRS_DATA_BRANCH` and delete all files from that branch before setting up GHRS for your reposistory, so that GHRS operates on a tidy environment.
-
 
 ### Setup
+
+The recommended way to run this Action is on a schedule, once per day.
 
 Create a GitHub Actions workflow file (for example `.github/workflows/github-repo-stats.yml`) with for example the following contents:
 
 ```yaml
- cat
 on:
   schedule:
     # Run this once per day (hours in UTC time zone).
@@ -109,6 +107,9 @@ Extract from `action.yml`:
       Must not end with a slash. Example: https://jgehrcke.github.io/ghrs-test
     default: none
 ```
+
+It's recommended that you create the data branch and delete all files from that branch before setting this Aaction up in your reposistory, so that this data branch appears as a tidy environment.
+You can of course do that later, too.
 
 ## Resources
 

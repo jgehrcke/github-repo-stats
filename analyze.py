@@ -1071,21 +1071,11 @@ def get_stars_over_time():
 
     df["stars_cumulative"] = df["star_events"].cumsum()
 
-    # TODO: adjust this bin width to the timeframe covered. Make it so that
-    # there are not more than ~100 data points for the entire time frame.
-    n_hour_bins = 24
-    log.info('len(df["stars_cumulative"]): %s', len(df["stars_cumulative"]))
-    log.info("downsample series into %s-hour bins", n_hour_bins)
-    # Resample the series into N-hour bins. Take max() for each group (could
-    # also do sum() for each group before the cumsum() operation above).
-    # do `dropna()` on the resampler to remove all up-sampled data points
-    stargazer_series = df["stars_cumulative"].resample(f"{n_hour_bins}h").max().dropna()
-    log.info("len(stargazer_series): %s", len(stargazer_series))
+    # Many data points? Downsample.
+    if len(df) > 50:
+        df = downsample_series_to_N_points(df, "stars_cumulative")
 
-    # Turn Series object into Dataframe object again, so that the column
-    # can be referred to explicitly, and for easier plotting. The values
-    # column retains the `stars_cumulative` name.
-    return stargazer_series.to_frame()
+    return df
 
 
 def get_forks_over_time():
@@ -1133,21 +1123,52 @@ def get_forks_over_time():
 
     df["forks_cumulative"] = df["fork_events"].cumsum()
 
-    # TODO: adjust this bin width to the timeframe covered. Make it so that
-    # there are not more than ~100 data points for the entire time frame.
-    n_hour_bins = 24 * 5
-    log.info('len(df["forks_cumulative"]): %s', len(df["forks_cumulative"]))
-    log.info("downsample series into %s-hour bins", n_hour_bins)
-    # Resample the series into N-hour bins. Take max() for each group (could
-    # also do sum() for each group before the cumsum() operation above).
-    # do `dropna()` on the resampler to remove all up-sampled data points
-    fork_series = df["forks_cumulative"].resample(f"{n_hour_bins}h").max().dropna()
-    log.info("len(fork_series): %s", len(fork_series))
+    # Many data points? Downsample.
+    if len(df) > 80:
+        df = downsample_series_to_N_points(df, "forks_cumulative")
 
-    # Turn Series object into Dataframe object again, so that the column
-    # can be referred to explicitly, and for easier plotting. The values
-    # column retains the `forks_cumulative` name.
-    return fork_series.to_frame()
+    return df
+
+
+def downsample_series_to_N_points(df, column):
+    # Choose a bin time width for downsampling. Identify tovered timespan
+    # first.
+
+    timespan_hours = int(
+        pd.Timedelta(df.index.values[-1] - df.index.values[0]).total_seconds() / 3600
+    )
+    log.info(
+        "timespan covererd, in hours (approximately): %s (%.1f days)",
+        timespan_hours,
+        timespan_hours / 24.0,
+    )
+
+    # Adjust this bin width to the timeframe covered. Make it so that there
+    # are not more than ~100 data points for the entire time frame.
+    # total_width / bin_width = n_bins -> bin_width = total_width / n_bins
+    # Approximate integer result is fine.
+    bin_width_hours = int(timespan_hours / 100)
+    log.info("choosing bin_width_hours: %s", bin_width_hours)
+
+    # n_hour_bins = 24
+
+    s = df[column]
+
+    log.info("len(series): %s", len(s))
+    log.info("downsample series into %s-hour bins", bin_width_hours)
+
+    # Resample the series into N-hour bins. Take max() for each group (assume
+    # this is a cumsum series). Do `dropna()` on the resampler to remove all
+    # up-sampled data points (so that each data point still reflects an actual
+    # event or a group of events, but when there was no event within a bin then
+    # that bin does not appear with a data point in the resulting plot).
+    s = s.resample(f"{bin_width_hours}h").max().dropna()
+
+    log.info("len(series): %s", len(s))
+
+    # Turn Series object into Dataframe object again. The values column
+    # retains the original column name
+    return s.to_frame()
 
 
 def parse_args():

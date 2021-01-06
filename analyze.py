@@ -702,13 +702,16 @@ def analyse_view_clones_ts_fragments():
 
     df_prev_agg = None
     if ARGS.views_clones_aggregate_inpath:
-        log.info("read previous aggregate: %s", ARGS.views_clones_aggregate_inpath)
-        df_prev_agg = pd.read_csv(
-            ARGS.views_clones_aggregate_inpath,
-            index_col=["time_iso8601"],
-            date_parser=lambda col: pd.to_datetime(col, utc=True),
-        )
-        df_prev_agg.index.rename("time", inplace=True)
+        if os.path.exists(ARGS.views_clones_aggregate_inpath):
+            log.info("read previous aggregate: %s", ARGS.views_clones_aggregate_inpath)
+            df_prev_agg = pd.read_csv(
+                ARGS.views_clones_aggregate_inpath,
+                index_col=["time_iso8601"],
+                date_parser=lambda col: pd.to_datetime(col, utc=True),
+            )
+            df_prev_agg.index.rename("time", inplace=True)
+        else:
+            log.info("previous aggregate file does not exist: %s", ARGS.views_clones_aggregate_inpath)
 
     log.info("time of newest snapshot: %s", newest_snapshot_time)
     log.info("build aggregate, drop duplicate data")

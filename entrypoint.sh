@@ -120,7 +120,7 @@ cat << EOF > README.md
 
 - statistics for repository https://github.com/${STATS_REPOSPEC}
 - managed by GitHub Action: https://github.com/jgehrcke/github-repo-stats
-- workflow that created this file: \`${GITHUB_WORKFLOW}\`
+- workflow that created this README: \`${GITHUB_WORKFLOW}\`
 
 **Latest report PDF**: [report.pdf](https://github.com/${DATA_REPOSPEC}/raw/${DATA_BRANCH_NAME}/${STATS_REPOSPEC}/latest-report/report.pdf)
 

@@ -77,6 +77,8 @@ def main():
     configure_altair()
 
     df_stargazers = get_stars_over_time()
+    df_forks = get_forks_over_time()
+
     gen_report_preamble()
 
     analyse_view_clones_ts_fragments()
@@ -87,6 +89,8 @@ def main():
 
     report_pdf_pagebreak()
     add_stargazers_section(df_stargazers)
+
+    add_fork_section(df_forks)
 
     gen_report_footer()
     finalize_and_render_report()
@@ -960,6 +964,48 @@ def add_stargazers_section(df):
     )
 
 
+def add_fork_section(df):
+
+    panel_props = {"height": 300, "width": "container", "padding": 10}
+    chart = (
+        alt.Chart(df.reset_index())
+        .mark_line(point=True)
+        .encode(
+            alt.X("time", type="temporal", title="date"),
+            alt.Y(
+                "forks_cumulative",
+                type="quantitative",
+                title="fork count (cumulative)",
+                scale=alt.Scale(
+                    domain=(0, df["forks_cumulative"].max() * 1.1),
+                    zero=True,
+                ),
+            ),
+        )
+        .configure_point(size=100)
+        .properties(**panel_props)
+    )
+
+    chart_spec = chart.to_json(indent=None)
+
+    MD_REPORT.write(
+        textwrap.dedent(
+            f"""
+
+    ## Forks
+
+
+    <div id="chart_forks" class="full-width-chart"></div>
+
+
+    """
+        )
+    )
+    JS_FOOTER_LINES.append(
+        f"vegaEmbed('#chart_forks', {chart_spec}, {VEGA_EMBED_OPTIONS_JSON}).catch(console.error);"
+    )
+
+
 def get_stars_over_time():
     # TODO: for ~10k stars repositories, this operation is too costly for doing
     # it as part of each analyzer invocation. Move this to the fetcher, and
@@ -976,6 +1022,9 @@ def get_stars_over_time():
     log.info("GH request limit before fetch operation: %s", reqlimit_before)
 
     gazers = []
+
+    # TODO for addressing the 10ks challenge: save state to disk, and refresh
+    # using reverse order iteration. See for repo in user.get_repos().reversed
     for count, gazer in enumerate(repo.get_stargazers_with_dates(), 1):
         # Store `PullRequest` object with integer key in dictionary.
         gazers.append(gazer)
@@ -1037,6 +1086,68 @@ def get_stars_over_time():
     # can be referred to explicitly, and for easier plotting. The values
     # column retains the `stars_cumulative` name.
     return stargazer_series.to_frame()
+
+
+def get_forks_over_time():
+    # TODO: for ~10k forks repositories, this operation is too costly for doing
+    # it as part of each analyzer invocation. Move this to the fetcher, and
+    # persist the data.
+    log.info("fetch fork time series for repo %s", ARGS.repospec)
+
+    hub = Github(
+        login_or_token=os.environ["GHRS_GITHUB_API_TOKEN"].strip(), per_page=100
+    )
+    repo = hub.get_repo(ARGS.repospec)
+    reqlimit_before = hub.get_rate_limit().core.remaining
+    log.info("GH request limit before fetch operation: %s", reqlimit_before)
+
+    forks = []
+    for count, fork in enumerate(repo.get_forks(), 1):
+        # Store `PullRequest` object with integer key in dictionary.
+        forks.append(fork)
+        if count % 200 == 0:
+            log.info("%s forks fetched", count)
+
+    reqlimit_after = hub.get_rate_limit().core.remaining
+    log.info("GH request limit after fetch operation: %s", reqlimit_after)
+    log.info("http requests made (approximately): %s", reqlimit_before - reqlimit_after)
+    log.info("current fork count: %s", len(forks))
+
+    # The GitHub API returns ISO 8601 timestamp strings encoding the timezone
+    # via the Z suffix, i.e. Zulu time, i.e. UTC. pygithub doesn't parze that
+    # timezone. That is, whereas the API returns `starred_at` in UTC, the
+    # datetime obj created by pygithub is a naive one. Correct for that.
+    forktimes_aware = [pytz.timezone("UTC").localize(f.created_at) for f in forks]
+
+    # Create sorted pandas DatetimeIndex
+    dtidx = pd.to_datetime(forktimes_aware)
+    dtidx = dtidx.sort_values()
+
+    # Each timestamp corresponds to *1* fork event. Build cumulative sum over
+    # time.
+    df = pd.DataFrame(
+        data={"fork_events": [1] * len(forks)},
+        index=dtidx,
+    )
+    df.index.name = "time"
+
+    df["forks_cumulative"] = df["fork_events"].cumsum()
+
+    # TODO: adjust this bin width to the timeframe covered. Make it so that
+    # there are not more than ~100 data points for the entire time frame.
+    n_hour_bins = 24 * 5
+    log.info('len(df["forks_cumulative"]): %s', len(df["forks_cumulative"]))
+    log.info("downsample series into %s-hour bins", n_hour_bins)
+    # Resample the series into N-hour bins. Take max() for each group (could
+    # also do sum() for each group before the cumsum() operation above).
+    # do `dropna()` on the resampler to remove all up-sampled data points
+    fork_series = df["forks_cumulative"].resample(f"{n_hour_bins}h").max().dropna()
+    log.info("len(fork_series): %s", len(fork_series))
+
+    # Turn Series object into Dataframe object again, so that the column
+    # can be referred to explicitly, and for easier plotting. The values
+    # column retains the `forks_cumulative` name.
+    return fork_series.to_frame()
 
 
 def parse_args():

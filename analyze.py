@@ -79,6 +79,10 @@ def main():
     df_stargazers = get_stars_over_time()
     df_forks = get_forks_over_time()
 
+    # Sync up the time window shown in the plots for forks and stars over time.
+    sf_date_axis_lim = gen_date_axis_lim((df_stargazers, df_forks))
+    log.info("time window for stargazer/fork plots: %s", sf_date_axis_lim)
+
     gen_report_preamble()
 
     analyse_view_clones_ts_fragments()
@@ -88,12 +92,23 @@ def main():
     analyse_top_x_snapshots("path")
 
     report_pdf_pagebreak()
-    add_stargazers_section(df_stargazers)
+    add_stargazers_section(df_stargazers, sf_date_axis_lim)
 
-    add_fork_section(df_forks)
+    add_fork_section(df_forks, sf_date_axis_lim)
 
     gen_report_footer()
     finalize_and_render_report()
+
+
+def gen_date_axis_lim(dfs):
+    # Find minimal first timestamp across dataframes, and maximal last
+    # timestamp. Return in string representation, example:
+    # ['2020-03-18', '2021-01-03']
+    # Can be used for setting time axis limits in Altair.
+    return [
+        pd.to_datetime(min(df.index.values[0] for df in dfs)).strftime("%Y-%m-%d"),
+        pd.to_datetime(max(df.index.values[-1] for df in dfs)).strftime("%Y-%m-%d"),
+    ]
 
 
 def configure_altair():
@@ -922,14 +937,21 @@ def analyse_view_clones_ts_fragments():
     )
 
 
-def add_stargazers_section(df):
+def add_stargazers_section(df, date_axis_lim):
+    # date_axis_lim is expected to be of the form ["2019-01-01", "2019-12-31"]
 
     panel_props = {"height": 300, "width": "container", "padding": 10}
     chart = (
         alt.Chart(df.reset_index())
         .mark_line(point=True)
         .encode(
-            alt.X("time", type="temporal", title="date"),
+            alt.X(
+                "time",
+                type="temporal",
+                title="date",
+                timeUnit="yearmonthdate",
+                scale=alt.Scale(domain=date_axis_lim),
+            ),
             alt.Y(
                 "stars_cumulative",
                 type="quantitative",
@@ -964,14 +986,21 @@ def add_stargazers_section(df):
     )
 
 
-def add_fork_section(df):
+def add_fork_section(df, date_axis_lim):
+    # date_axis_lim is expected to be of the form ["2019-01-01", "2019-12-31"]):
 
     panel_props = {"height": 300, "width": "container", "padding": 10}
     chart = (
         alt.Chart(df.reset_index())
         .mark_line(point=True)
         .encode(
-            alt.X("time", type="temporal", title="date"),
+            alt.X(
+                "time",
+                type="temporal",
+                title="date",
+                timeUnit="yearmonthdate",
+                scale=alt.Scale(domain=date_axis_lim),
+            ),
             alt.Y(
                 "forks_cumulative",
                 type="quantitative",

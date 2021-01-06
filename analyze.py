@@ -92,6 +92,23 @@ def main():
     add_fork_section(df_forks, sf_date_axis_lim)
     report_pdf_pagebreak()
 
+    MD_REPORT.write(
+        textwrap.dedent(
+            f"""
+
+    ## Top referrers and paths
+
+
+    Note: Each data point in the plots shown below is influenced by the 14 days
+    leading up to it. Each data point is the arithmetic mean of the "unique
+    visitors per day" metric, built from a time window of 14 days width, and
+    plotted at the right edge of that very time window. That is, these plots
+    respond slowly to change (narrow peaks are smoothed out).
+
+    """
+        )
+    )
+
     analyse_top_x_snapshots("referrer")
     analyse_top_x_snapshots("path")
 
@@ -588,7 +605,7 @@ def analyse_top_x_snapshots(entity_type):
             f"""
 
 
-    ## {heading}
+    #### {heading}
 
 
     <div id="chart_{entity_type}s_top_n_alltime" class="full-width-chart"></div>
@@ -973,6 +990,8 @@ def add_stargazers_section(df, date_axis_lim):
 
     ## Stargazers
 
+    Each data point corresponds to at least one stargazer event.
+    The time resolution is one day.
 
     <div id="chart_stargazers" class="full-width-chart"></div>
 
@@ -1022,6 +1041,8 @@ def add_fork_section(df, date_axis_lim):
 
     ## Forks
 
+    Each data point corresponds to at least one fork event.
+    The time resolution is one day.
 
     <div id="chart_forks" class="full-width-chart"></div>
 

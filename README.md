@@ -14,17 +14,17 @@ The primary purpose of this Action is to overcome the [14-day limitation](https:
   * [Data branch](https://github.com/jgehrcke/ghrs-test/tree/github-repo-stats/jgehrcke/covid-19-germany-gae)
 
 
-## Features
+## Highlights
 
-* The report is generated as an HTML document, with a plotting solution based on [Altair](https://github.com/altair-viz/altair)/[Vega](https://vega.github.io/vega/).
-* The report is also generated as a PDF document from the HTML document, using a headless browser.
-* Charts are rendered with SVG elements, and therefore the PDF report contains vector graphics, too.
+* The report is generated in two formats: HTML, PDF.
+* Plots are based on [Altair](https://github.com/altair-viz/altair)/[Vega](https://vega.github.io/vega/).
+* The PDF report contains vector graphics (charts are rendered with SVG elements in browser, PDF is generated with a headless browser).
 * Data updates, aggregation results, and report files are stored in the git repository that you install this Action in: this Action commits changes to a special branch. No cloud storage or database needed. As a result, you have complete and transparent history for data updates and reports, with clear commit messages, in a single place.
 * The observed repository (the one to build the report for) can be different from the repository you install this Action in.
-* Careful data handling: there are a number of traps when aggregating data based on what the GitHub Traffic API returns. This project tries to not fall for them.
+* Careful data analysis: there are a number of traps ([example](https://github.com/jgehrcke/github-repo-stats/blob/5fefc527288995e2e7e35593db496451580f51db/analyze.py#L748)) when aggregating data based on what the GitHub Traffic API returns. This project tries to not fall for them. One goal of this project is to perform [advanced analysis](https://github.com/jgehrcke/github-repo-stats/blob/5fefc527288995e2e7e35593db496451580f51db/analyze.py#L478) where possible.
 
 
-**The report contains:**
+**As of now, the report contains:**
 
 * Traffic stats:
   * Unique and total views per day

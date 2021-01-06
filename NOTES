@@ -1,3 +1,5 @@
+Remove `template.html` from dist (resources)
+
 Use https://github.com/arzzen/git-quick-stats
 
 Switch to using https://github.com/jd/tenacity

@@ -2,16 +2,23 @@ name: "github-repo-stats"
 description: "github-repo-stats"
 inputs:
   repository:
-    description: "Repository spec (<owner-or-org>/<reponame>) for repo to fetch stats for"
+    description: >
+      Repository spec (<owner-or-org>/<reponame>) for the repository to fetch
+      statistics for.
     default: ${{ github.repository }}
   ghtoken:
-    description: "GitHub API token for reading the repo stats and for interacting with data repo (must be set if repo to fetch stats for is not the data repo)"
+    description: >
+      GitHub API token for reading repo stats and for interacting with the data
+      repo (must be set if repo to fetch stats for is not the data repo).
     default: ${{ github.token }}
   databranch:
-    description: "Data branch: Branch to push data to (in the data repo)"
+    description: >
+      Data branch: Branch to push data to (in the data repo).
     default: github-repo-stats
   ghpagesprefix:
-    description: "Set this if the data branch in the data repo is exposed via GitHub pages. Must not end with a slash. Example: https://jgehrcke.github.io/ghrs-test"
+    description: >
+      Set this if the data branch in the data repo is exposed via GitHub pages.
+      Must not end with a slash. Example: https://jgehrcke.github.io/ghrs-test
     default: none
 runs:
   using: "docker"

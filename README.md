@@ -16,8 +16,9 @@ The primary purpose of this Action is to overcome the [14-day limitation](https:
 
 ## Highlights
 
-* The report is generated in two formats: HTML, PDF.
-* Plots are based on [Altair](https://github.com/altair-viz/altair)/[Vega](https://vega.github.io/vega/).
+* The report is generated in two document formats: HTML and PDF.
+* The HTML report resembles how GitHub renders Markdown and is meant to be exposed via GitHub pages.
+* Charts are based on [Altair](https://github.com/altair-viz/altair)/[Vega](https://vega.github.io/vega/).
 * The PDF report contains vector graphics.
 * Data updates, aggregation results, and report files are stored in the git repository that you install this Action in: this Action commits changes to a special branch. No cloud storage or database needed. As a result, you have complete and transparent history for data updates and reports, with clear commit messages, in a single place.
 * The observed repository (the one to build the report for) can be different from the repository you install this Action in.
@@ -45,7 +46,7 @@ The primary purpose of this Action is to overcome the [14-day limitation](https:
 
 These two repositories can be the same. But they don't have to be :-).
 
-That is, you can for example set up this Action in a private repository but have it observe  public repository.
+That is, you can for example set up this Action in a private repository but have it observe a public repository.
 
 
 ### Setup
@@ -109,7 +110,7 @@ Extract from `action.yml`:
     default: none
 ```
 
-It's recommended that you create the data branch and delete all files from that branch before setting this Aaction up in your reposistory, so that this data branch appears as a tidy environment.
+It's recommended that you create the data branch and delete all files from that branch before setting this Action up in your reposistory, so that this data branch appears as a tidy environment.
 You can of course do that later, too.
 
 ## Resources

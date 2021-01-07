@@ -1,5 +1,8 @@
 Remove `template.html` from dist (resources)
 
+Write out stargazer/fork time series
+https://github.com/jgehrcke/github-repo-stats/blob/ab8879f76be7d54c940ba6bdcc6dbf55527aa3b9/analyze.py#L1080
+
 Use https://github.com/arzzen/git-quick-stats
 
 Switch to using https://github.com/jd/tenacity

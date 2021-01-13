@@ -59,7 +59,9 @@ Create a GitHub Actions workflow file (for example `.github/workflows/github-rep
 on:
   schedule:
     # Run this once per day (hours in UTC time zone).
-    - cron: "* 7 * * *"
+    # Towards the end of the day for keeping the last
+    # data point meaningful.
+    - cron: "* 23 * * *"
   workflow_dispatch: # Allow for running this manually.
 
 jobs:

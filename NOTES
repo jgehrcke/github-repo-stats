@@ -4,6 +4,13 @@ Auto-detect scenario where semi-logarithmic plotting would help
 (large peak in time window, too little resolution in most part of
 the time window) -- or, always show semi-logarithmic view?
 
+Add credits to README:
+ pandoc
+ altair
+ vega
+ carbonplan styles
+ ...
+
 Write out stargazer/fork time series
 https://github.com/jgehrcke/github-repo-stats/blob/ab8879f76be7d54c940ba6bdcc6dbf55527aa3b9/analyze.py#L1080
 

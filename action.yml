@@ -1,5 +1,8 @@
 name: "github-repo-stats"
 description: "github-repo-stats"
+branding:
+  icon: 'bar-chart-2'
+  color: 'black'
 inputs:
   repository:
     description: >

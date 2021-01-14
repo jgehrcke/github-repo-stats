@@ -79,17 +79,23 @@ def main():
     df_stargazers = get_stars_over_time()
     df_forks = get_forks_over_time()
 
-    # Sync up the time window shown in the plots for forks and stars over time.
-    sf_date_axis_lim = gen_date_axis_lim((df_stargazers, df_forks))
-    log.info("time window for stargazer/fork plots: %s", sf_date_axis_lim)
-
     gen_report_preamble()
 
     analyse_view_clones_ts_fragments()
     report_pdf_pagebreak()
 
-    add_stargazers_section(df_stargazers, sf_date_axis_lim)
-    add_fork_section(df_forks, sf_date_axis_lim)
+    sf_date_axis_lim = None
+    if len(df_stargazers) and len(df_forks):
+        # Sync up the time window shown in the plots for forks and stars over time.
+        sf_date_axis_lim = gen_date_axis_lim((df_stargazers, df_forks))
+        log.info("time window for stargazer/fork plots: %s", sf_date_axis_lim)
+
+    if len(df_stargazers):
+        add_stargazers_section(df_stargazers, sf_date_axis_lim)
+
+    if len(df_forks):
+        add_fork_section(df_forks, sf_date_axis_lim)
+
     report_pdf_pagebreak()
 
     MD_REPORT.write(
@@ -711,7 +717,10 @@ def analyse_view_clones_ts_fragments():
             )
             df_prev_agg.index.rename("time", inplace=True)
         else:
-            log.info("previous aggregate file does not exist: %s", ARGS.views_clones_aggregate_inpath)
+            log.info(
+                "previous aggregate file does not exist: %s",
+                ARGS.views_clones_aggregate_inpath,
+            )
 
     log.info("time of newest snapshot: %s", newest_snapshot_time)
     log.info("build aggregate, drop duplicate data")
@@ -959,18 +968,21 @@ def analyse_view_clones_ts_fragments():
 def add_stargazers_section(df, date_axis_lim):
     # date_axis_lim is expected to be of the form ["2019-01-01", "2019-12-31"]
 
+    x_kwargs = {
+        "field": "time",
+        "type": "temporal",
+        "title": "date",
+        "timeUnit": "yearmonthdate",
+    }
+    if date_axis_lim is not None:
+        x_kwargs["scale"] = alt.Scale(domain=date_axis_lim)
+
     panel_props = {"height": 300, "width": "container", "padding": 10}
     chart = (
         alt.Chart(df.reset_index())
         .mark_line(point=True)
         .encode(
-            alt.X(
-                "time",
-                type="temporal",
-                title="date",
-                timeUnit="yearmonthdate",
-                scale=alt.Scale(domain=date_axis_lim),
-            ),
+            alt.X(**x_kwargs),
             alt.Y(
                 "stars_cumulative",
                 type="quantitative",
@@ -1010,18 +1022,21 @@ def add_stargazers_section(df, date_axis_lim):
 def add_fork_section(df, date_axis_lim):
     # date_axis_lim is expected to be of the form ["2019-01-01", "2019-12-31"]):
 
+    x_kwargs = {
+        "field": "time",
+        "type": "temporal",
+        "title": "date",
+        "timeUnit": "yearmonthdate",
+    }
+    if date_axis_lim:
+        x_kwargs["scale"]: alt.Scale(domain=date_axis_lim)
+
     panel_props = {"height": 300, "width": "container", "padding": 10}
     chart = (
         alt.Chart(df.reset_index())
         .mark_line(point=True)
         .encode(
-            alt.X(
-                "time",
-                type="temporal",
-                title="date",
-                timeUnit="yearmonthdate",
-                scale=alt.Scale(domain=date_axis_lim),
-            ),
+            alt.X(**x_kwargs),
             alt.Y(
                 "forks_cumulative",
                 type="quantitative",

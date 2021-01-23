@@ -40,3 +40,4 @@ jobs:
           pip install carbonplan[styles] altair
           sudo apt-get install pandoc
           python analyze.py jgehrcke/github-repo-stats _ghrs_jgehrcke_github-repo-stats
+          cat *_report/*_report.md

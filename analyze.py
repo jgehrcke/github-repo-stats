@@ -29,11 +29,9 @@ from io import StringIO
 
 import pandas as pd
 from github import Github
-import retrying
 import pytz
 
 import altair as alt
-import matplotlib
 
 
 """
@@ -100,7 +98,7 @@ def main():
 
     MD_REPORT.write(
         textwrap.dedent(
-            f"""
+            """
 
     ## Top referrers and paths
 
@@ -631,7 +629,7 @@ def analyse_view_clones_ts_fragments():
 
     log.info("read views/clones time series fragments (CSV docs)")
 
-    basename_suffix = f"_views_clones_series_fragment.csv"
+    basename_suffix = "_views_clones_series_fragment.csv"
     csvpaths = _glob_csvpaths(basename_suffix)
 
     dfs = []
@@ -930,7 +928,7 @@ def analyse_view_clones_ts_fragments():
 
     MD_REPORT.write(
         textwrap.dedent(
-            f"""
+            """
 
 
     ## Views
@@ -1001,7 +999,7 @@ def add_stargazers_section(df, date_axis_lim):
 
     MD_REPORT.write(
         textwrap.dedent(
-            f"""
+            """
 
     ## Stargazers
 
@@ -1055,7 +1053,7 @@ def add_fork_section(df, date_axis_lim):
 
     MD_REPORT.write(
         textwrap.dedent(
-            f"""
+            """
 
     ## Forks
 

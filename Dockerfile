@@ -24,7 +24,7 @@ RUN apt-get -y install google-chrome-stable
 #     ./aws/install && \
 #     rm awscliv2.zip
 
-RUN pip install pandas==1.1.5 PyGitHub==1.54 pytz retrying \
+RUN pip install pandas==1.2.1 PyGitHub==1.54 pytz retrying \
     selenium==3.141.0 webdriver_manager carbonplan[styles] altair
 
 COPY fetch.py /fetch.py

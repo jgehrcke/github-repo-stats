@@ -159,7 +159,7 @@ def gen_report_preamble():
         textwrap.dedent(
             f"""
     % Statistics for {ARGS.repospec}
-    % Generated with [jgehrcke/github-repo-stats](https://github.com/jgehrcke/github-repo-stats) at {now_text}.
+    % Generated for [{ARGS.repospec}](https://github.com/{ARGS.repospec}) with [jgehrcke/github-repo-stats](https://github.com/jgehrcke/github-repo-stats) at {now_text}.
 
     """
         ).strip()

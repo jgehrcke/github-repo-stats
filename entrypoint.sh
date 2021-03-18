@@ -57,10 +57,13 @@ echo "operating in $(pwd)"
 
 mkdir newdata
 echo "Fetch new data snapshot for ${STATS_REPOSPEC}"
+
+set +e
 python /fetch.py "${STATS_REPOSPEC}" --output-directory=newdata
 FETCH_ECODE=$?
-set +x
+set -e
 
+set +x
 if [ $FETCH_ECODE -ne 0 ]; then
     echo "error: fetch.py returned with code ${FETCH_ECODE} -- exit."
     exit $FETCH_ECODE
@@ -85,26 +88,35 @@ sleep 1
 
 echo "Parse data files, perform aggregation and analysis, generate Markdown report and render as HTML"
 set -x
+set +e
 python /analyze.py \
     --resources-directory /resources \
     --output-directory latest-report \
     --outfile-prefix "" \
+    --stargazer-ts-resampled-outpath "ghrs-data/stargazers.csv" \
+    --fork-ts-resampled-outpath "ghrs-data/forks.csv" \
     --views-clones-aggregate-outpath "ghrs-data/views_clones_aggregate.csv" \
     --views-clones-aggregate-inpath "ghrs-data/views_clones_aggregate.csv" \
     --delete-ts-fragments \
     "${STATS_REPOSPEC}" ghrs-data/snapshots
 ANALYZE_ECODE=$?
-set +x
+set -e
 
+set +x
 if [ $ANALYZE_ECODE -ne 0 ]; then
     echo "error: analyze.py returned with code ${ANALYZE_ECODE} -- exit."
     exit $ANALYZE_ECODE
 fi
 
+
 # Commit the changed view/clone aggregate, and the deletion of snapshot files
 git add ghrs-data/views_clones_aggregate.csv
 git add ghrs-data/snapshots
 git commit -m "ghrs: vc agg ${UPDATE_ID} for ${STATS_REPOSPEC}"
+
+# Commit the updated stargazer / fork. Do not error out if nothing changed.
+git add ghrs-data/forks.csv ghrs-data/stargazers.csv
+git commit -m "ghrs: stars and forks ${UPDATE_ID} for ${STATS_REPOSPEC}" || echo "commit failed, ignore"
 
 echo "Translate HTML report into PDF, via headless Chrome"
 set -x

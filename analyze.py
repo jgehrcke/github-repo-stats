@@ -242,7 +242,7 @@ def gen_pandoc_html_template(target):
                     min-width: 200px;
                     max-width: 980px;
                     margin: 0 auto;
-                    padding: 45px;
+                    padding: 5px;
                 }
 
                 div.full-width-chart {

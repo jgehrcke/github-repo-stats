@@ -581,7 +581,7 @@ def analyse_top_x_snapshots(entity_type):
                 sort=alt.SortField("order"),
             ),
         )
-        .configure_point(size=100)
+        .configure_point(size=50)
         .properties(**panel_props)
     )
 

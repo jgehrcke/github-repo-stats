@@ -125,10 +125,10 @@ def gen_date_axis_lim(dfs):
     # timestamp. Return in string representation, example:
     # ['2020-03-18', '2021-01-03']
     # Can be used for setting time axis limits in Altair.
-    return [
+    return (
         pd.to_datetime(min(df.index.values[0] for df in dfs)).strftime("%Y-%m-%d"),
         pd.to_datetime(max(df.index.values[-1] for df in dfs)).strftime("%Y-%m-%d"),
-    ]
+    )
 
 
 def configure_altair():
@@ -741,6 +741,7 @@ def analyse_view_clones_ts_fragments():
             log.error(
                 "set(df_prev_agg.columns) != set (dfall.columns): %s, %s",
                 df_prev_agg.columns,
+                dfall.columns,
             )
             sys.exit(1)
         log.info("pd.concat(dfall, df_prev_agg)")
@@ -973,7 +974,9 @@ def add_stargazers_section(df, date_axis_lim):
         "title": "date",
         "timeUnit": "yearmonthdate",
     }
+
     if date_axis_lim is not None:
+        log.info("custom time window for stargazer plot: %s", date_axis_lim)
         x_kwargs["scale"] = alt.Scale(domain=date_axis_lim)
 
     panel_props = {"height": 300, "width": "container", "padding": 10}
@@ -1019,7 +1022,7 @@ def add_stargazers_section(df, date_axis_lim):
 
 
 def add_fork_section(df, date_axis_lim):
-    # date_axis_lim is expected to be of the form ["2019-01-01", "2019-12-31"]):
+    # date_axis_lim is expected to be of the form ["2019-01-01", "2019-12-31"])
 
     x_kwargs = {
         "field": "time",
@@ -1027,8 +1030,10 @@ def add_fork_section(df, date_axis_lim):
         "title": "date",
         "timeUnit": "yearmonthdate",
     }
+
     if date_axis_lim:
-        x_kwargs["scale"]: alt.Scale(domain=date_axis_lim)
+        log.info("custom time window for fork plot: %s", date_axis_lim)
+        x_kwargs["scale"] = alt.Scale(domain=date_axis_lim)
 
     panel_props = {"height": 300, "width": "container", "padding": 10}
     chart = (

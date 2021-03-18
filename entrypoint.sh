@@ -108,7 +108,7 @@ if [ $ANALYZE_ECODE -ne 0 ]; then
     exit $ANALYZE_ECODE
 fi
 
-
+set -x
 # Commit the changed view/clone aggregate, and the deletion of snapshot files
 git add ghrs-data/views_clones_aggregate.csv
 git add ghrs-data/snapshots
@@ -119,7 +119,6 @@ git add ghrs-data/forks.csv ghrs-data/stargazers.csv
 git commit -m "ghrs: stars and forks ${UPDATE_ID} for ${STATS_REPOSPEC}" || echo "commit failed, ignore"
 
 echo "Translate HTML report into PDF, via headless Chrome"
-set -x
 python /pdf.py latest-report/report_for_pdf.html latest-report/report.pdf
 
 # Add directory contents (markdown, HTML, PDF).

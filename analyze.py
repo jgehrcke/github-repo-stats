@@ -1144,15 +1144,6 @@ def get_stars_over_time():
 
     log.info("stars_cumulative, raw data: %s", df["stars_cumulative"])
 
-    #     "--stargazer-ts-resampled-outpath",
-    #     default="",
-    #     metavar="PATH",
-    #     help="Write resampled stargazer time series to CSV file",
-    # )
-
-    # parser.add_argument(
-    #     "--fork-ts-resampled-outpath",
-
     # As noted above, this should actually be part of the fetcher.
     if ARGS.stargazer_ts_resampled_outpath:
         # The CSV file should contain integers after all (no ".0"), therefore
@@ -1285,16 +1276,19 @@ def resample_to_1d_resolution(df, column):
 
     Before:
 
-    2020-03-18 16:42:31+00:00      1 2020-03-19 20:17:10+00:00      2
-    2020-03-20 05:31:25+00:00      3 2020-03-20 09:01:38+00:00      4
+    2020-03-18 16:42:31+00:00      1
+    2020-03-19 20:17:10+00:00      2
+    2020-03-20 05:31:25+00:00      3
+    2020-03-20 09:01:38+00:00      4
     2020-03-20 14:03:45+00:00      5
     ...
 
     After:
 
-    2020-03-18 00:00:00+00:00               1.0 2020-03-19 00:00:00+00:00
-    2.0 2020-03-20 00:00:00+00:00               7.0 2020-03-21 00:00:00+00:00
-    9.0
+    2020-03-18 00:00:00+00:00 1.0
+    2020-03-19 00:00:00+00:00 2.0
+    2020-03-20 00:00:00+00:00 7.0
+    2020-03-21 00:00:00+00:00 9.0
     """
     s = df[column]
     log.info("len(series): %s", len(s))

@@ -1142,7 +1142,31 @@ def get_stars_over_time():
 
     df["stars_cumulative"] = df["star_events"].cumsum()
 
-    # Many data points? Downsample.
+    log.info("stars_cumulative, raw data: %s", df["stars_cumulative"])
+
+    #     "--stargazer-ts-resampled-outpath",
+    #     default="",
+    #     metavar="PATH",
+    #     help="Write resampled stargazer time series to CSV file",
+    # )
+
+    # parser.add_argument(
+    #     "--fork-ts-resampled-outpath",
+
+    # As noted above, this should actually be part of the fetcher.
+    if ARGS.stargazer_ts_resampled_outpath:
+        # The CSV file should contain integers after all (no ".0"), therefore
+        # cast to int. There are no NaNs to be expected, i.e. this should work
+        # reliably.
+        df_for_csv_file = resample_to_1d_resolution(df, "stars_cumulative").astype(int)
+        log.info("stars_cumulative, for CSV file (resampled): %s", df_for_csv_file)
+        log.info("write aggregate to %s", ARGS.views_clones_aggregate_outpath)
+        # Pragmatic strategy against partial write / encoding problems.
+        tpath = ARGS.stargazer_ts_resampled_outpath + ".tmp"
+        df_for_csv_file.to_csv(tpath, index_label="time_iso8601")
+        os.rename(tpath, ARGS.stargazer_ts_resampled_outpath)
+
+    # Many data points? Downsample, for plotting.
     if len(df) > 50:
         df = downsample_series_to_N_points(df, "stars_cumulative")
 
@@ -1175,7 +1199,7 @@ def get_forks_over_time():
     log.info("current fork count: %s", len(forks))
 
     # The GitHub API returns ISO 8601 timestamp strings encoding the timezone
-    # via the Z suffix, i.e. Zulu time, i.e. UTC. pygithub doesn't parze that
+    # via the Z suffix, i.e. Zulu time, i.e. UTC. pygithub doesn't parse that
     # timezone. That is, whereas the API returns `starred_at` in UTC, the
     # datetime obj created by pygithub is a naive one. Correct for that.
     forktimes_aware = [pytz.timezone("UTC").localize(f.created_at) for f in forks]
@@ -1191,8 +1215,20 @@ def get_forks_over_time():
         index=dtidx,
     )
     df.index.name = "time"
-
     df["forks_cumulative"] = df["fork_events"].cumsum()
+
+    # As noted above, this should actually be part of the fetcher.
+    if ARGS.fork_ts_resampled_outpath:
+        # The CSV file should contain integers after all (no ".0"), therefore
+        # cast to int. There are no NaNs to be expected, i.e. this should work
+        # reliably.
+        df_for_csv_file = resample_to_1d_resolution(df, "forks_cumulative").astype(int)
+        log.info("forks_cumulative, for CSV file (resampled): %s", df_for_csv_file)
+        log.info("write aggregate to %s", ARGS.fork_ts_resampled_outpath)
+        # Pragmatic strategy against partial write / encoding problems.
+        tpath = ARGS.fork_ts_resampled_outpath + ".tmp"
+        df_for_csv_file.to_csv(tpath, index_label="time_iso8601")
+        os.rename(tpath, ARGS.fork_ts_resampled_outpath)
 
     # Many data points? Downsample.
     if len(df) > 80:
@@ -1242,6 +1278,41 @@ def downsample_series_to_N_points(df, column):
     return s.to_frame()
 
 
+def resample_to_1d_resolution(df, column):
+    """
+    Have at most one data point per day. For days w/o change, have no data
+    point.
+
+    Before:
+
+    2020-03-18 16:42:31+00:00      1 2020-03-19 20:17:10+00:00      2
+    2020-03-20 05:31:25+00:00      3 2020-03-20 09:01:38+00:00      4
+    2020-03-20 14:03:45+00:00      5
+    ...
+
+    After:
+
+    2020-03-18 00:00:00+00:00               1.0 2020-03-19 00:00:00+00:00
+    2.0 2020-03-20 00:00:00+00:00               7.0 2020-03-21 00:00:00+00:00
+    9.0
+    """
+    s = df[column]
+    log.info("len(series): %s", len(s))
+    log.info("resample series into 1d bins")
+
+    # Take max() for each group (assume this is a cumsum series). Do `dropna()`
+    # on the resampler to remove all up-sampled data points (so that each data
+    # point still reflects an actual event or a group of events, but when there
+    # was no event within a bin then that bin does not appear with a data point
+    # in the resulting plot).
+    s = s.resample("1d").max().dropna()
+    log.info("len(series): %s", len(s))
+
+    # Turn Series object into Dataframe object again. The values column
+    # retains the original column name
+    return s.to_frame()
+
+
 def parse_args():
     global OUTDIR
     global ARGS
@@ -1264,6 +1335,20 @@ def parse_args():
     parser.add_argument("--resources-directory", default="resources")
     parser.add_argument("--output-directory", default=TODAY + "_report")
     parser.add_argument("--outfile-prefix", default=TODAY + "_")
+
+    parser.add_argument(
+        "--stargazer-ts-resampled-outpath",
+        default="",
+        metavar="PATH",
+        help="Write resampled stargazer time series to CSV file",
+    )
+
+    parser.add_argument(
+        "--fork-ts-resampled-outpath",
+        default="",
+        metavar="PATH",
+        help="Write resampled fork time series to CSV file",
+    )
 
     parser.add_argument(
         "--views-clones-aggregate-outpath",

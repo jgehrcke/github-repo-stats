@@ -5,7 +5,7 @@
 Data handling:
 
 * Fix a rare view / clone count data loss condition ([issue #4](https://github.com/jgehrcke/github-repo-stats/issues/4)). Thanks to Davis J. McGregor.
-* Write stargazer and fork timeseries to data repository as CSV files, with at most one data point per day (resampled).
+* Write stargazer and fork time series to data repository as CSV files, with at most one data point per day (resampled).
 
 Plot improvements:
 

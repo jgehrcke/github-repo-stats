@@ -85,6 +85,9 @@ jobs:
 
 ```
 
+Note that if you set `ghtoken: ${{ secrets.ghrs_github_api_token }}` as above then in the _data_ repository (where the action is executed) you need to have a secret defined, with the name `GHRS_GITHUB_API_TOKEN` (of course you can change the name).
+The content of the secret needs to be an API token that has the `repo` scope for accessing the _stats_ repository.
+You can create such a personal access token under https://github.com/settings/tokens.
 
 ### Input parameter reference
 

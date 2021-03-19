@@ -34,8 +34,10 @@ export GHRS_GITHUB_API_TOKEN="${INPUT_GHTOKEN}"
 # The name of the branch in the data repository.
 DATA_BRANCH_NAME="${INPUT_DATABRANCH}"
 
-set -x
+# For debugging, let's be sure that the GHRS_GITHUB_API_TOKEN is non-empty.
+echo "length of API TOKEN: ${#GHRS_GITHUB_API_TOKEN}"
 
+set -x
 # Clone / check out specific branch only (to minimize overhead, also see
 # https://stackoverflow.com/a/4568323/145400).
 # git clone -b "${DATA_BRANCH_NAME}" \

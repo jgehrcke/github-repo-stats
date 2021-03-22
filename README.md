@@ -118,7 +118,8 @@ Extract from `action.yml`:
 It's recommended that you create the data branch and delete all files from that branch before setting this Action up in your reposistory, so that this data branch appears as a tidy environment.
 You can of course do that later, too.
 
-## Resources
+## Further resources
 
+* [“GitHub Stars” -- useful for *what*?](https://opensource.stackexchange.com/questions/5110/github-stars-is-a-very-useful-metric-but-for-what/5114#5114)
 * [GitHub Traffic API docs](https://docs.github.com/en/free-pro-team@latest/rest/reference/repos#traffic)
 * [Do your own views count?](https://stackoverflow.com/a/63697886/145400)

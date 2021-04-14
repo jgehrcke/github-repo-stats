@@ -162,10 +162,42 @@ EOF
 
 fi
 
+
 set -x
 git add README.md
 git commit -m "ghrs: report ${UPDATE_ID} for ${STATS_REPOSPEC}"
-git push --set-upstream origin "${DATA_BRANCH_NAME}"
+set +x
+
+# Now, push the changes to the remote branch. Note that there might have been
+# other jobs running, pushing to the same branch in the meantime. In that case,
+# the push fails with "updates were rejected because the remote contains work
+# that you do not have locally." -- assume that changes are actually isolated
+# (not in conflict, but happening in distinct directories) and therefore assume
+# that a rather simple pull/push loop will after all help synchronize the
+# concurrent racers here. Also see issue #9 and #11.
+
+# Abort waiting upon this deadline.
+MAX_WAIT_SECONDS=500
+DEADLINE=$(($(date +%s) + ${MAX_WAIT_SECONDS}))
+
+while true
+do
+
+    if (( $(date +%s) > ${DEADLINE} )); then
+        echo "pull/push loop: deadline hit: waited for ${MAX_WAIT_SECONDS} s"
+        exit 1
+    fi
+
+    set -x
+    # Do a pull right before the push, to increase likelihood that the first
+    # push actually works.
+    git pull
+    git push --set-upstream origin "${DATA_BRANCH_NAME}" || \
+        echo "push failed, retry soon"
+
+    echo "pull/push loop:sleep for 10 s"
+    sleep 10
+done
 
 echo "finished"
 exit 0

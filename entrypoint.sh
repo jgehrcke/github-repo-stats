@@ -189,11 +189,15 @@ do
     fi
 
     set -x
-    # Do a pull right before the push, to increase likelihood that the first
-    # push actually works.
+    # Do a pull right before the push, they should be looked at as an 'atomic
+    # unit', doing them right after one another is the recipe for long-term
+    # convergence here -- of course that means that even the first push is
+    # quite likely to succeed. Not sure if more than 1 loop iteration will
+    # ever be hit in the real world.
     git pull
     git push --set-upstream origin "${DATA_BRANCH_NAME}" || \
         echo "push failed, retry soon"
+    set +x
 
     echo "pull/push loop:sleep for 10 s"
     sleep 10

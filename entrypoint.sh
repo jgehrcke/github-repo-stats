@@ -60,6 +60,13 @@ echo "operating in $(pwd)"
 mkdir newdata
 echo "Fetch new data snapshot for ${STATS_REPOSPEC}"
 
+# Have CPython emit its stderr data immediately to the attached
+# streams to reduce the likelihood for bad order of log lines in the GH
+# Action log viewer (seen `error: fetch.py returned with code 1 -- exit.`
+# before the last line of the CPython stderr stream was shown.)
+
+export PYTHONUNBUFFERED="on"
+
 set +e
 python /fetch.py "${STATS_REPOSPEC}" --output-directory=newdata
 FETCH_ECODE=$?
@@ -67,6 +74,10 @@ set -e
 
 set +x
 if [ $FETCH_ECODE -ne 0 ]; then
+    # Try to work around sluggish stderr/out interleaving in GH Action's log
+    # viewer, give CPython's stderr emitted above a little time to be captured
+    # and forwarded by the GH Action log viewer.
+    sleep 0.1
     echo "error: fetch.py returned with code ${FETCH_ECODE} -- exit."
     exit $FETCH_ECODE
 fi

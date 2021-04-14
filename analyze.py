@@ -155,11 +155,14 @@ def gen_report_footer():
 
 def gen_report_preamble():
     now_text = NOW.strftime("%Y-%m-%d %H:%M UTC")
+    attr_link = (
+        "[jgehrcke/github-repo-stats](https://github.com/jgehrcke/github-repo-stats)"
+    )
     MD_REPORT.write(
         textwrap.dedent(
             f"""
     % Statistics for {ARGS.repospec}
-    % Generated for [{ARGS.repospec}](https://github.com/{ARGS.repospec}) with [jgehrcke/github-repo-stats](https://github.com/jgehrcke/github-repo-stats) at {now_text}.
+    % Generated for [{ARGS.repospec}](https://github.com/{ARGS.repospec}) with {attr_link} at {now_text}.
 
     """
         ).strip()
@@ -464,6 +467,7 @@ def analyse_top_x_snapshots(entity_type):
 
     if len(dfa) == 0:
         log.info("leave early: no data for entity of type %s", entity_type)
+        return
 
     # Build a dict: key is path/referrer name, and value is DF with
     # corresponding raw time series.
@@ -644,6 +648,13 @@ def analyse_view_clones_ts_fragments():
             index_col=["time_iso8601"],
             date_parser=lambda col: pd.to_datetime(col, utc=True),
         )
+
+        # Skip logic for empty data frames. The CSV files written should never
+        # be empty, but if such a bad file made it into the file system then
+        # skipping here facilitates debugging and enhanced robustness.
+        if len(df) == 0:
+            log.warning("empty dataframe parsed from %s, skip", p)
+            continue
 
         # A time series fragment might look like this:
         #

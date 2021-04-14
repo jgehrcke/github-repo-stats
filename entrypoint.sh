@@ -60,6 +60,13 @@ echo "operating in $(pwd)"
 mkdir newdata
 echo "Fetch new data snapshot for ${STATS_REPOSPEC}"
 
+# Have CPython emit its stderr data immediately to the attached
+# streams to reduce the likelihood for bad order of log lines in the GH
+# Action log viewer (seen `error: fetch.py returned with code 1 -- exit.`
+# before the last line of the CPython stderr stream was shown.)
+
+export PYTHONUNBUFFERED="on"
+
 set +e
 python /fetch.py "${STATS_REPOSPEC}" --output-directory=newdata
 FETCH_ECODE=$?
@@ -67,6 +74,10 @@ set -e
 
 set +x
 if [ $FETCH_ECODE -ne 0 ]; then
+    # Try to work around sluggish stderr/out interleaving in GH Action's log
+    # viewer, give CPython's stderr emitted above a little time to be captured
+    # and forwarded by the GH Action log viewer.
+    sleep 0.1
     echo "error: fetch.py returned with code ${FETCH_ECODE} -- exit."
     exit $FETCH_ECODE
 fi
@@ -151,10 +162,46 @@ EOF
 
 fi
 
+
 set -x
 git add README.md
 git commit -m "ghrs: report ${UPDATE_ID} for ${STATS_REPOSPEC}"
-git push --set-upstream origin "${DATA_BRANCH_NAME}"
+set +x
+
+# Now, push the changes to the remote branch. Note that there might have been
+# other jobs running, pushing to the same branch in the meantime. In that case,
+# the push fails with "updates were rejected because the remote contains work
+# that you do not have locally." -- assume that changes are actually isolated
+# (not in conflict, but happening in distinct directories) and therefore assume
+# that a rather simple pull/push loop will after all help synchronize the
+# concurrent racers here. Also see issue #9 and #11.
+
+# Abort waiting upon this deadline.
+MAX_WAIT_SECONDS=500
+DEADLINE=$(($(date +%s) + ${MAX_WAIT_SECONDS}))
+
+while true
+do
+
+    if (( $(date +%s) > ${DEADLINE} )); then
+        echo "pull/push loop: deadline hit: waited for ${MAX_WAIT_SECONDS} s"
+        exit 1
+    fi
+
+    set -x
+    # Do a pull right before the push, they should be looked at as an 'atomic
+    # unit', doing them right after one another is the recipe for long-term
+    # convergence here -- of course that means that even the first push is
+    # quite likely to succeed. Not sure if more than 1 loop iteration will
+    # ever be hit in the real world.
+    git pull
+    git push --set-upstream origin "${DATA_BRANCH_NAME}" || \
+        echo "push failed, retry soon"
+    set +x
+
+    echo "pull/push loop:sleep for 10 s"
+    sleep 10
+done
 
 echo "finished"
 exit 0

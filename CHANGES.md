@@ -2,6 +2,13 @@
 
 ## 1.1.0 (in development)
 
+Job robustness:
+
+* Consolidate data branch writing so that multiple jobs operating concurrently on the same branch are less likely to fail ([issue #9](https://github.com/jgehrcke/github-repo-stats/issues/9)). Thanks to Henry Bley-Vroman and Dmytro Chasovskyi for the feedback.
+* Fix an edge case for missing path/referrer data ([issue #8](https://github.com/jgehrcke/github-repo-stats/issues/8)).
+* Attempt to fix an edge case for missing views/clones data ([issue #11](https://github.com/jgehrcke/github-repo-stats/issues/11)).
+* Log output: work towards less interleaved stdout/err in the GH Actions log viewer.
+
 Data handling:
 
 * Fix a rare view / clone count data loss condition ([issue #4](https://github.com/jgehrcke/github-repo-stats/issues/4)). Thanks to Davis J. McGregor.

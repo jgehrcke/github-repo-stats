@@ -253,8 +253,8 @@ def clones_or_views_to_df(items, metric):
     )
     df.index.name = "time_iso8601"
 
-    # log.info("built dataframe for %s:\n%s", metric, df)
-    # log.info("dataframe datetimeindex detail: %s", df.index)
+    log.info("built dataframe for %s:\n%s", metric, df)
+    log.info("dataframe datetimeindex detail: %s", df.index)
     return df
 
 

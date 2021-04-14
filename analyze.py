@@ -155,11 +155,14 @@ def gen_report_footer():
 
 def gen_report_preamble():
     now_text = NOW.strftime("%Y-%m-%d %H:%M UTC")
+    attr_link = (
+        "[jgehrcke/github-repo-stats](https://github.com/jgehrcke/github-repo-stats)"
+    )
     MD_REPORT.write(
         textwrap.dedent(
             f"""
     % Statistics for {ARGS.repospec}
-    % Generated for [{ARGS.repospec}](https://github.com/{ARGS.repospec}) with [jgehrcke/github-repo-stats](https://github.com/jgehrcke/github-repo-stats) at {now_text}.
+    % Generated for [{ARGS.repospec}](https://github.com/{ARGS.repospec}) with {attr_link} at {now_text}.
 
     """
         ).strip()

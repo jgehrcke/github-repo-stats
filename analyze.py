@@ -645,6 +645,13 @@ def analyse_view_clones_ts_fragments():
             date_parser=lambda col: pd.to_datetime(col, utc=True),
         )
 
+        # Skip logic for empty data frames. The CSV files written should never
+        # be empty, but if such a bad file made it into the file system then
+        # skipping here facilitates debugging and enhanced robustness.
+        if len(df) == 0:
+            log.warning('empty dataframe parsed from %s, skip', p)
+            continue
+
         # A time series fragment might look like this:
         #
         # df_views_clones:

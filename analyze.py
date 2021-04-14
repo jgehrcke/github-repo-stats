@@ -464,6 +464,7 @@ def analyse_top_x_snapshots(entity_type):
 
     if len(dfa) == 0:
         log.info("leave early: no data for entity of type %s", entity_type)
+        return
 
     # Build a dict: key is path/referrer name, and value is DF with
     # corresponding raw time series.
@@ -649,7 +650,7 @@ def analyse_view_clones_ts_fragments():
         # be empty, but if such a bad file made it into the file system then
         # skipping here facilitates debugging and enhanced robustness.
         if len(df) == 0:
-            log.warning('empty dataframe parsed from %s, skip', p)
+            log.warning("empty dataframe parsed from %s, skip", p)
             continue
 
         # A time series fragment might look like this:

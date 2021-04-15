@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.1 (in development)
+
+* Fix an edge case for exclusively empty views/clones fragments ([issue #15](https://github.com/jgehrcke/github-repo-stats/issues/15)).
+
 ## 1.1.0 (2021-04-14)
 
 Job robustness:

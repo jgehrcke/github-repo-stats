@@ -714,6 +714,10 @@ def analyse_view_clones_ts_fragments():
 
     log.info("total sample count: %s", sum(len(df) for df in dfs))
 
+    if len(dfs) == 0:
+        log.info("leave early: no data for views/clones")
+        return
+
     newest_snapshot_time = max(df.attrs["snapshot_time"] for df in dfs)
 
     df_prev_agg = None

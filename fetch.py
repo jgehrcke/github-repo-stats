@@ -76,19 +76,33 @@ def main():
     log.info("current working directory: %s", os.getcwd())
     log.info("write output CSV files to directory: %s", outdir_path)
 
-    df_views_clones.to_csv(
-        os.path.join(
-            outdir_path, f"{INVOCATION_TIME_STRING}_views_clones_series_fragment.csv"
+    if len(df_views_clones):
+        df_views_clones.to_csv(
+            os.path.join(
+                outdir_path,
+                f"{INVOCATION_TIME_STRING}_views_clones_series_fragment.csv",
+            )
         )
-    )
-    df_referrers_snapshot_now.to_csv(
-        os.path.join(
-            outdir_path, f"{INVOCATION_TIME_STRING}_top_referrers_snapshot.csv"
+    else:
+        log.info("do not write df_views_clones: empty")
+
+    if len(df_referrers_snapshot_now):
+        df_referrers_snapshot_now.to_csv(
+            os.path.join(
+                outdir_path, f"{INVOCATION_TIME_STRING}_top_referrers_snapshot.csv"
+            )
         )
-    )
-    df_paths_snapshot_now.to_csv(
-        os.path.join(outdir_path, f"{INVOCATION_TIME_STRING}_top_paths_snapshot.csv")
-    )
+    else:
+        log.info("do not write df_referrers_snapshot_now: empty")
+
+    if len(df_paths_snapshot_now):
+        df_paths_snapshot_now.to_csv(
+            os.path.join(
+                outdir_path, f"{INVOCATION_TIME_STRING}_top_paths_snapshot.csv"
+            )
+        )
+    else:
+        log.info("do not write df_paths_snapshot_now: empty")
 
     log.info("done!")
 

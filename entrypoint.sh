@@ -88,14 +88,18 @@ tree newdata
 
 set -x
 mkdir -p ghrs-data/snapshots
-cp -a newdata/* ghrs-data/snapshots
+cp -a newdata/* ghrs-data/snapshots || echo "copy failed, ignore (continue)"
 
 # New data files: show them from git's point of view.
 git status --untracked=no --porcelain
-git add ghrs-data/snapshots
-git commit -m "ghrs: snap ${UPDATE_ID} for ${STATS_REPOSPEC}"
 
-# Pragmatic method against interleaved stderr/out in GHA log viewer.
+# exit code 0 when nothing added
+git add ghrs-data/snapshots
+
+# exit code 1 upon 'nothing to commit, working tree clean'
+git commit -m "ghrs: snap ${UPDATE_ID} for ${STATS_REPOSPEC}" || echo "commit failed, ignore (continue)"
+
+# Pragmatic wait, against interleaved stderr/out in GHA log viewer.
 set +x
 sleep 1
 
@@ -125,11 +129,13 @@ set -x
 # Commit the changed view/clone aggregate, and the deletion of snapshot files
 git add ghrs-data/views_clones_aggregate.csv
 git add ghrs-data/snapshots
-git commit -m "ghrs: vc agg ${UPDATE_ID} for ${STATS_REPOSPEC}"
+
+# exit code 1 upon 'nothing to commit, working tree clean'
+git commit -m "ghrs: vc agg ${UPDATE_ID} for ${STATS_REPOSPEC}" || echo "commit failed, ignore (continue)"
 
 # Commit the updated stargazer / fork. Do not error out if nothing changed.
 git add ghrs-data/forks.csv ghrs-data/stargazers.csv
-git commit -m "ghrs: stars and forks ${UPDATE_ID} for ${STATS_REPOSPEC}" || echo "commit failed, ignore"
+git commit -m "ghrs: stars and forks ${UPDATE_ID} for ${STATS_REPOSPEC}" || echo "commit failed, ignore  (continue)"
 
 echo "Translate HTML report into PDF, via headless Chrome"
 python /pdf.py latest-report/report_for_pdf.html latest-report/report.pdf

@@ -63,7 +63,7 @@ on:
   schedule:
     # Run this once per day, towards the end of the day for keeping the most
     # recent data point most meaningful (hours are interpreted in UTC).
-    - cron: "* 23 * * *"
+    - cron: "0 23 * * *"
   workflow_dispatch: # Allow for running this manually.
 
 jobs:

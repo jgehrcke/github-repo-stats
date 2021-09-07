@@ -25,6 +25,10 @@ jobs:
           flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
           # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
           flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+      - name: test Dockerfiles
+        run: |
+          make base-image
+          make image
       - name: test fetch.py
         env:
           GHRS_GITHUB_API_TOKEN: ${{ secrets.ghrs_github_api_token }}

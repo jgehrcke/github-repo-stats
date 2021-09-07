@@ -25,23 +25,34 @@ jobs:
           flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
           # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
           flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
-      - name: test Dockerfiles
+      - name: test main Dockerfile
+        run: make image
+      - name: test fetch.py in container
+        env:
+          GHRS_GITHUB_API_TOKEN: ${{ secrets.ghrs_github_api_token }}
+        run: |
+          docker run \
+            --entrypoint "/bin/bash" \
+            -e GHRS_GITHUB_API_TOKEN \
+            -v $(pwd):/cwd \
+            jgehrcke/github-repo-stats:local -c \
+            'set -o errexit && cd /cwd
+             python fetch.py jgehrcke/github-repo-stats
+            '
+      - name: test analyze.py in container
+        env:
+          GHRS_GITHUB_API_TOKEN: ${{ secrets.ghrs_github_api_token }}
+        run: |
+          docker run \
+            --entrypoint "/bin/bash" \
+            -e GHRS_GITHUB_API_TOKEN \
+            -v $(pwd):/cwd \
+            jgehrcke/github-repo-stats:local -c \
+            'set -o errexit && cd /cwd
+              python fetch.py jgehrcke/github-repo-stats
+              python analyze.py jgehrcke/github-repo-stats _ghrs_jgehrcke_github-repo-stats
+              cat *_report/*_report.md
+            '
+      - name: test base image Dockerfile
         run: |
           make base-image
-          make image
-      - name: test fetch.py
-        env:
-          GHRS_GITHUB_API_TOKEN: ${{ secrets.ghrs_github_api_token }}
-        run: |
-          pip install pandas==1.2.1 PyGitHub==1.54 pytz retrying
-          python fetch.py jgehrcke/github-repo-stats
-      - name: test analyze.py
-        env:
-          GHRS_GITHUB_API_TOKEN: ${{ secrets.ghrs_github_api_token }}
-        run: |
-          pip install pandas==1.2.1 PyGitHub==1.54 pytz retrying
-          python fetch.py jgehrcke/github-repo-stats
-          pip install carbonplan[styles] altair
-          sudo apt-get install pandoc
-          python analyze.py jgehrcke/github-repo-stats _ghrs_jgehrcke_github-repo-stats
-          cat *_report/*_report.md

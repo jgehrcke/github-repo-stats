@@ -11,4 +11,4 @@ base-image-push:
 # This is for testing the container image build based on Dockerfile, as
 # executed by GH actions.
 image:
-	docker build -f Dockerfile . -t jgehrcke/github-repo-stats
+	docker build -f Dockerfile . -t jgehrcke/github-repo-stats:local

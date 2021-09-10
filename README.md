@@ -122,6 +122,47 @@ Extract from `action.yml`:
 It's recommended that you create the data branch and delete all files from that branch before setting this Action up in your reposistory, so that this data branch appears as a tidy environment.
 You can of course do that later, too.
 
+### Tracking multiple repos
+[Egil Hansen](https://github.com/egil) discovered an elegant hack for tracking stats on multiple repositories using a single workflow action:
+
+_Example workflow for tracking multiple repositories:_
+```
+name: update-stats
+concurrency: 'update-stats'
+
+on:
+  schedule:
+    # Run this once per day, towards the end of the day for keeping the most
+    # recent data point most meaningful (hours are interpreted in UTC).
+    - cron: "0 23 * * *"
+  workflow_dispatch: # Allow for running this manually.
+
+jobs:
+  update-stats:
+    name: repostats-for-nice-projects
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        statsRepo: ['bob/nice-project', 'alice/also-nice-project']
+      fail-fast: false
+      # Using 1 to help avoid commit conflicts
+      max-parallel: 1
+    steps:
+      - name: run-ghrs
+        uses: jgehrcke/github-repo-stats@v1.1.0
+        with:
+          # Define the stats repositories (the repos to fetch
+          # stats for and to generate the reports for).
+          repository: ${{ matrix.statsRepo }}
+          # Set a GitHub API token that can read the stats
+          # repository, and that can push to the data
+          # repository (which this workflow file lives in),
+          # to store data and the report files.
+          ghtoken: ${{ secrets.ghrs_github_api_token }}
+          # Data branch: Branch to push data to (in the data repo).
+          databranch: main
+```
+
 ## Further resources
 
 * [“GitHub Stars” -- useful for *what*?](https://opensource.stackexchange.com/questions/5110/github-stars-is-a-very-useful-metric-but-for-what/5114#5114)

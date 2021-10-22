@@ -463,6 +463,10 @@ def analyse_top_x_snapshots(entity_type):
     # and contains imformation about multiple timestamps
 
     # First, create a dataframe containing all information.
+    if type(snapshot_dfs) is list:
+        log.info("leave early: no data to concatenate for type %s", entity_type)
+        return
+
     dfa = pd.concat(snapshot_dfs)
 
     if len(dfa) == 0:
@@ -842,6 +846,11 @@ def analyse_view_clones_ts_fragments():
     # Why reset_index()? See
     # https://github.com/altair-viz/altair/issues/271#issuecomment-573480284
     df_agg = df_agg.reset_index()
+    df_agg = pd.concat([df_agg, df_agg.drop(columns=["time"]).cumsum().rename(columns={"views_total": "views_total_cum",
+                                                                                       "views_unique": "views_unique_cum",
+                                                                                       "clones_total": "clones_total_cum",
+                                                                                       "clones_unique": "clones_unique_cum"})],
+                       axis=1)
     df_agg_views = df_agg.drop(columns=["clones_unique", "clones_total"])
     df_agg_clones = df_agg.drop(columns=["views_unique", "views_total"])
 
@@ -862,6 +871,28 @@ def analyse_view_clones_ts_fragments():
                     title="unique clones per day",
                     scale=alt.Scale(
                         domain=(0, df_agg_clones["clones_unique"].max() * 1.1),
+                        zero=True,
+                    ),
+                ),
+            )
+        )
+        .configure_axisY(labelBound=True)
+        .configure_point(size=100)
+        .properties(**panel_props)
+    )
+
+    chart_clones_unique_cum = (
+        (
+            alt.Chart(df_agg_clones)
+                .mark_line(point=True)
+                .encode(
+                alt.X("time", type="temporal", title="date", timeUnit="yearmonthdate"),
+                alt.Y(
+                    "clones_unique_cum",
+                    type="quantitative",
+                    title="cumulative unique clones",
+                    scale=alt.Scale(
+                        domain=(0, df_agg_clones["clones_unique_cum"].max() * 1.1),
                         zero=True,
                     ),
                 ),
@@ -894,6 +925,28 @@ def analyse_view_clones_ts_fragments():
         .properties(**panel_props)
     )
 
+    chart_clones_total_cum = (
+        (
+            alt.Chart(df_agg_clones)
+            .mark_line(point=True)
+            .encode(
+                alt.X("time", type="temporal", title="date", timeUnit="yearmonthdate"),
+                alt.Y(
+                    "clones_total_cum",
+                    type="quantitative",
+                    title="cumulative clones",
+                    scale=alt.Scale(
+                        domain=(0, df_agg_clones["clones_total_cum"].max() * 1.1),
+                        zero=True,
+                    ),
+                ),
+            )
+        )
+        .configure_axisY(labelBound=True)
+        .configure_point(size=100)
+        .properties(**panel_props)
+    )
+
     chart_views_unique = (
         (
             alt.Chart(df_agg_views)
@@ -906,6 +959,28 @@ def analyse_view_clones_ts_fragments():
                     title="unique views per day",
                     scale=alt.Scale(
                         domain=(0, df_agg_views["views_unique"].max() * 1.1),
+                        zero=True,
+                    ),
+                ),
+            )
+        )
+        .configure_axisY(labelBound=True)
+        .configure_point(size=100)
+        .properties(**panel_props)
+    )
+
+    chart_views_unique_cum = (
+        (
+            alt.Chart(df_agg_views)
+                .mark_line(point=True)
+                .encode(
+                alt.X("time", type="temporal", title="date", timeUnit="yearmonthdate"),
+                alt.Y(
+                    "views_unique_cum",
+                    type="quantitative",
+                    title="cumulative unique visitors",
+                    scale=alt.Scale(
+                        domain=(0, df_agg_views["views_unique_cum"].max() * 1.1),
                         zero=True,
                     ),
                 ),
@@ -938,10 +1013,36 @@ def analyse_view_clones_ts_fragments():
         .properties(**panel_props)
     )
 
+    chart_views_total_cum = (
+        (
+            alt.Chart(df_agg_views)
+                .mark_line(point=True)
+                .encode(
+                alt.X("time", type="temporal", title="date", timeUnit="yearmonthdate"),
+                alt.Y(
+                    "views_total_cum",
+                    type="quantitative",
+                    title="cumulative views",
+                    scale=alt.Scale(
+                        domain=(0, df_agg_views["views_total_cum"].max() * 1.1),
+                        zero=True,
+                    ),
+                ),
+            )
+        )
+        .configure_axisY(labelBound=True)
+        .configure_point(size=100)
+        .properties(**panel_props)
+    )
+
     chart_views_unique_spec = chart_views_unique.to_json(indent=None)
     chart_views_total_spec = chart_views_total.to_json(indent=None)
     chart_clones_unique_spec = chart_clones_unique.to_json(indent=None)
     chart_clones_total_spec = chart_clones_total.to_json(indent=None)
+    chart_views_unique_cum_spec = chart_views_unique_cum.to_json(indent=None)
+    chart_views_total_cum_spec = chart_views_total_cum.to_json(indent=None)
+    chart_clones_unique_cum_spec = chart_clones_unique_cum.to_json(indent=None)
+    chart_clones_total_cum_spec = chart_clones_total_cum.to_json(indent=None)
 
     MD_REPORT.write(
         textwrap.dedent(
@@ -950,22 +1051,38 @@ def analyse_view_clones_ts_fragments():
 
     ## Views
 
-    #### Unique visitors
+    #### Daily unique visitors
     <div id="chart_views_unique" class="full-width-chart"></div>
+    
+    #### Cumulative unique visitors
+    <div id="chart_views_unique_cum" class="full-width-chart"></div>
 
-    #### Total views
+    <div class="pagebreak-for-print"> </div>
+    
+    #### Daily views
     <div id="chart_views_total" class="full-width-chart"></div>
+
+    #### Cumulative views
+    <div id="chart_views_total_cum" class="full-width-chart"></div>
 
     <div class="pagebreak-for-print"> </div>
 
 
     ## Clones
 
-    #### Unique cloners
+    #### Daily unique cloners
     <div id="chart_clones_unique" class="full-width-chart"></div>
 
-    #### Total clones
+    #### Cumulative unique cloners
+    <div id="chart_clones_unique_cum" class="full-width-chart"></div>
+
+    <div class="pagebreak-for-print"> </div>
+
+    #### Daily clones
     <div id="chart_clones_total" class="full-width-chart"></div>
+
+    #### Cumulative clones
+    <div id="chart_clones_total_cum" class="full-width-chart"></div>
 
     """
         )
@@ -973,9 +1090,13 @@ def analyse_view_clones_ts_fragments():
     JS_FOOTER_LINES.extend(
         [
             f"vegaEmbed('#chart_views_unique', {chart_views_unique_spec}, {VEGA_EMBED_OPTIONS_JSON}).catch(console.error);",
+            f"vegaEmbed('#chart_views_unique_cum', {chart_views_unique_cum_spec}, {VEGA_EMBED_OPTIONS_JSON}).catch(console.error);",
             f"vegaEmbed('#chart_views_total', {chart_views_total_spec}, {VEGA_EMBED_OPTIONS_JSON}).catch(console.error);",
+            f"vegaEmbed('#chart_views_total_cum', {chart_views_total_cum_spec}, {VEGA_EMBED_OPTIONS_JSON}).catch(console.error);",
             f"vegaEmbed('#chart_clones_unique', {chart_clones_unique_spec}, {VEGA_EMBED_OPTIONS_JSON}).catch(console.error);",
+            f"vegaEmbed('#chart_clones_unique_cum', {chart_clones_unique_cum_spec}, {VEGA_EMBED_OPTIONS_JSON}).catch(console.error);",
             f"vegaEmbed('#chart_clones_total', {chart_clones_total_spec}, {VEGA_EMBED_OPTIONS_JSON}).catch(console.error);",
+            f"vegaEmbed('#chart_clones_total_cum', {chart_clones_total_cum_spec}, {VEGA_EMBED_OPTIONS_JSON}).catch(console.error);",
         ]
     )
 

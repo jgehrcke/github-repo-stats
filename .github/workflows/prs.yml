@@ -37,7 +37,7 @@ jobs:
             -v $(pwd):/cwd \
             jgehrcke/github-repo-stats:local -c \
             'set -o errexit && cd /cwd
-             python fetch.py jgehrcke/github-repo-stats
+             python fetch.py iqcToolbox/iqcToolbox
             '
       - name: test analyze.py in container
         env:
@@ -49,8 +49,8 @@ jobs:
             -v $(pwd):/cwd \
             jgehrcke/github-repo-stats:local -c \
             'set -o errexit && cd /cwd
-              python fetch.py jgehrcke/github-repo-stats
-              python analyze.py jgehrcke/github-repo-stats _ghrs_jgehrcke_github-repo-stats
+              python fetch.py iqctoolbox/iqctoolbox
+              python analyze.py iqcToolbox/iqcToolbox _ghrs_iqctoolbox_github-repo-stats
               cat *_report/*_report.md
             '
       - name: test base image Dockerfile

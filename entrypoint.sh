@@ -208,7 +208,7 @@ do
     # quite likely to succeed. Not sure if more than 1 loop iteration will
     # ever be hit in the real world.
     set -x
-    git pull # error out if pull fails (errexit)
+    git pull origin "${DATA_BRANCH_NAME}" # error out if pull fails (errexit)
 
     set +e
     git push --set-upstream origin "${DATA_BRANCH_NAME}"

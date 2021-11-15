@@ -38,12 +38,15 @@ DATA_BRANCH_NAME="${INPUT_DATABRANCH}"
 echo "length of API TOKEN: ${#GHRS_GITHUB_API_TOKEN}"
 
 set -x
+set +e
 # Clone / check out specific branch only (to minimize overhead, also see
 # https://stackoverflow.com/a/4568323/145400).
 # git clone -b "${DATA_BRANCH_NAME}" \
 #     --single-branch git@github.com:${REPOSPEC}.git
 git ls-remote --exit-code --heads https://ghactions:${GHRS_GITHUB_API_TOKEN}@github.com/${DATA_REPOSPEC}.git "${DATA_BRANCH_NAME}"
-if [ $? -eq 2 ]; then
+LS_ECODE=$?
+set -e
+if [ $LS_ECODE -eq 2 ]; then
     # DATA_BRANCH_NAME branch doesn't exists, create a new one
     git clone https://ghactions:${GHRS_GITHUB_API_TOKEN}@github.com/${DATA_REPOSPEC}.git .
     git remote set-url origin https://ghactions:${GHRS_GITHUB_API_TOKEN}@github.com/${DATA_REPOSPEC}.git

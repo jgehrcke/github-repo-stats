@@ -53,6 +53,7 @@ else
     # DATA_BRANCH_NAME branch exists
     git clone --single-branch --branch "${DATA_BRANCH_NAME}" https://ghactions:${GHRS_GITHUB_API_TOKEN}@github.com/${DATA_REPOSPEC}.git .
 fi
+
 git config --local user.email "action@github.com"
 git config --local user.name "GitHub Action"
 
@@ -201,14 +202,23 @@ do
         exit 1
     fi
 
+    # Do a pull right before the push. They should be looked at as an 'atomic
+    # unit', doing them right after one another in repeated fashion is the
+    # recipe for long-term convergence here. The first push is quite likely to
+    # succeed though: it is very unlikely that another racer pushes between the
+    # pull/push below.
 
-    # Do a pull right before the push, they should be looked at as an 'atomic
-    # unit', doing them right after one another is the recipe for long-term
-    # convergence here -- of course that means that even the first push is
-    # quite likely to succeed. Not sure if more than 1 loop iteration will
-    # ever be hit in the real world.
+    # The pull may however also fail. In that case, stay in the loop. Two
+    # expected pull failure modes that we thought about so far:
+    #
+    # - transient issues -- in thase case it's good to retry
+    # - when further above the data branch was freshly created in the local
+    #   checkout then this pull fails with "There is no tracking information
+    #   for the current branch." -- in that case the subsequent push will
+    #   succeed, and create the remote branch.
+
     set -x
-    git pull origin "${DATA_BRANCH_NAME}" # error out if pull fails (errexit)
+    git pull origin "${DATA_BRANCH_NAME}" || echo "pull failed, ignore (continue)"
 
     set +e
     git push --set-upstream origin "${DATA_BRANCH_NAME}"

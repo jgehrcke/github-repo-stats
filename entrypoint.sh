@@ -39,15 +39,13 @@ echo "length of API TOKEN: ${#GHRS_GITHUB_API_TOKEN}"
 
 set -x
 set +e
-# Clone / check out specific branch only (to minimize overhead, also see
-# https://stackoverflow.com/a/4568323/145400).
-# git clone -b "${DATA_BRANCH_NAME}" \
-#     --single-branch git@github.com:${REPOSPEC}.git
+# Check out data branch only if it exists. To minimize overhead, also see
+# https://stackoverflow.com/a/4568323/145400.
 git ls-remote --exit-code --heads https://ghactions:${GHRS_GITHUB_API_TOKEN}@github.com/${DATA_REPOSPEC}.git "${DATA_BRANCH_NAME}"
 LS_ECODE=$?
 set -e
 if [ $LS_ECODE -eq 2 ]; then
-    # DATA_BRANCH_NAME branch doesn't exists, create a new one
+    # DATA_BRANCH_NAME branch doesn't exist. Do full clone and create branch.
     git clone https://ghactions:${GHRS_GITHUB_API_TOKEN}@github.com/${DATA_REPOSPEC}.git .
     git remote set-url origin https://ghactions:${GHRS_GITHUB_API_TOKEN}@github.com/${DATA_REPOSPEC}.git
     git checkout -b "${DATA_BRANCH_NAME}"
@@ -55,13 +53,13 @@ else
     # DATA_BRANCH_NAME branch exists
     git clone --single-branch --branch "${DATA_BRANCH_NAME}" https://ghactions:${GHRS_GITHUB_API_TOKEN}@github.com/${DATA_REPOSPEC}.git .
 fi
+
 git config --local user.email "action@github.com"
 git config --local user.name "GitHub Action"
 
 # Do not write to the root of the repository, but to a directory named after
-# the stats respository (owner/repo). So that, in theory, this data repository
-# can be used by GHRS for more than one stats repositories, using the same git.
-# branch.
+# the stats respository (owner/repo). So that this data repository can be used
+# by GHRS for more than one stats repository using the same git branch.
 mkdir -p "${STATS_REPOSPEC}"
 cd "${STATS_REPOSPEC}"
 
@@ -70,10 +68,10 @@ echo "operating in $(pwd)"
 mkdir newdata
 echo "Fetch new data snapshot for ${STATS_REPOSPEC}"
 
-# Have CPython emit its stderr data immediately to the attached
-# streams to reduce the likelihood for bad order of log lines in the GH
-# Action log viewer (seen `error: fetch.py returned with code 1 -- exit.`
-# before the last line of the CPython stderr stream was shown.)
+# Have CPython emit its stderr data immediately to the attached streams to
+# reduce the likelihood for bad order of log lines in the GH Action log viewer
+# (seen `error: fetch.py returned with code 1 -- exit.` before the last line of
+# the CPython stderr stream was shown.)
 
 export PYTHONUNBUFFERED="on"
 
@@ -204,14 +202,23 @@ do
         exit 1
     fi
 
+    # Do a pull right before the push. They should be looked at as an 'atomic
+    # unit', doing them right after one another in repeated fashion is the
+    # recipe for long-term convergence here. The first push is quite likely to
+    # succeed though: it is very unlikely that another racer pushes between the
+    # pull/push below.
 
-    # Do a pull right before the push, they should be looked at as an 'atomic
-    # unit', doing them right after one another is the recipe for long-term
-    # convergence here -- of course that means that even the first push is
-    # quite likely to succeed. Not sure if more than 1 loop iteration will
-    # ever be hit in the real world.
+    # The pull may however also fail. In that case, stay in the loop. Two
+    # expected pull failure modes that we thought about so far:
+    #
+    # - transient issues -- in thase case it's good to retry
+    # - when further above the data branch was freshly created in the local
+    #   checkout then this pull fails with "There is no tracking information
+    #   for the current branch." -- in that case the subsequent push will
+    #   succeed, and create the remote branch.
+
     set -x
-    git pull origin "${DATA_BRANCH_NAME}" # error out if pull fails (errexit)
+    git pull origin "${DATA_BRANCH_NAME}" || echo "pull failed, ignore (continue)"
 
     set +e
     git push --set-upstream origin "${DATA_BRANCH_NAME}"

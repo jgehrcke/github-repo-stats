@@ -1347,7 +1347,7 @@ def parse_args():
 
     parser.add_argument(
         "snapshotdir",
-        metavar="PATH",
+        metavar="SNAPSHOT_DIR_PATH",
         help="path to directory containing CSV files of data snapshots / time series fragments, obtained via fetch.py",
     )
 

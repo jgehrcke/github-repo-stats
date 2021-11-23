@@ -595,6 +595,15 @@ def analyse_top_x_snapshots(entity_type):
                 entity_type,
                 type="nominal",
                 sort=alt.SortField("order"),
+                # https://vega.github.io/vega-lite/docs/legend.html#legend-properties
+                legend={
+                    #"orient": "bottom",
+                    "orient": "top",
+                    "direction": "vertical",
+                    # "legendX": 120,
+                    # "legendY": 340,
+                    "title": "Legend:"
+                } ,
             ),
         )
         .configure_point(size=30)

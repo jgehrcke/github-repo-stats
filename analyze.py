@@ -1167,7 +1167,7 @@ def get_stars_over_time():
         # reliably.
         df_for_csv_file = resample_to_1d_resolution(df, "stars_cumulative").astype(int)
         log.info("stars_cumulative, for CSV file (resampled): %s", df_for_csv_file)
-        log.info("write aggregate to %s", ARGS.views_clones_aggregate_outpath)
+        log.info("write aggregate to %s", ARGS.stargazer_ts_resampled_outpath)
         # Pragmatic strategy against partial write / encoding problems.
         tpath = ARGS.stargazer_ts_resampled_outpath + ".tmp"
         df_for_csv_file.to_csv(tpath, index_label="time_iso8601")

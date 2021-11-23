@@ -716,11 +716,12 @@ def analyse_view_clones_ts_fragments():
     log.info("total sample count: %s", sum(len(df) for df in dfs))
 
     if len(dfs) == 0:
-        log.info("leave early: no data for views/clones")
-        return
+        log.info("special case: no snapshots read for views/clones")
+    else:
+        newest_snapshot_time = max(df.attrs["snapshot_time"] for df in dfs)
+        log.info("time of newest snapshot: %s", newest_snapshot_time)
 
-    newest_snapshot_time = max(df.attrs["snapshot_time"] for df in dfs)
-
+    # Read previously created views/clones aggregate file if it exists.
     df_prev_agg = None
     if ARGS.views_clones_aggregate_inpath:
         if os.path.exists(ARGS.views_clones_aggregate_inpath):
@@ -737,9 +738,12 @@ def analyse_view_clones_ts_fragments():
                 ARGS.views_clones_aggregate_inpath,
             )
 
-    log.info("time of newest snapshot: %s", newest_snapshot_time)
-    log.info("build aggregate, drop duplicate data")
 
+    if len(dfs) == 0 and df_prev_agg is None:
+        log.info("leave early: no data for views/clones: no snapshots, no previous aggregate")
+        return
+
+    log.info("build aggregate, drop duplicate data")
     # Each dataframe in `dfs` corresponds to one time series fragment
     # ("snapshot") obtained from the GitHub API. Each time series fragment
     # contains 15 samples (rows), with two adjacent samples being 24 hours
@@ -749,19 +753,25 @@ def analyse_view_clones_ts_fragments():
     # are expected to be "the same" as in the snapshot taken the day before).
     # Stich these fragments together (with a buch of "duplicate samples), and
     # then sort this result by time.
-    log.info("pd.concat(dfs)")
-    dfall = pd.concat(dfs)
+    if len(dfs):
+        # combine all snapshots
+        log.info("pd.concat(dfs)")
+        df_allsnapshots = pd.concat(dfs)
 
-    if df_prev_agg is not None:
-        if set(df_prev_agg.columns) != set(dfall.columns):
-            log.error(
-                "set(df_prev_agg.columns) != set (dfall.columns): %s, %s",
-                df_prev_agg.columns,
-                dfall.columns,
-            )
-            sys.exit(1)
-        log.info("pd.concat(dfall, df_prev_agg)")
-        dfall = pd.concat([dfall, df_prev_agg])
+        # combine the result of combine-all-snapshots with previous aggregate
+        if df_prev_agg is not None:
+            if set(df_prev_agg.columns) != set(df_allsnapshots.columns):
+                log.error(
+                    "set(df_prev_agg.columns) != set (dfall.columns): %s, %s",
+                    df_prev_agg.columns,
+                    df_allsnapshots.columns,
+                )
+                sys.exit(1)
+            log.info("pd.concat(dfall, df_prev_agg)")
+            dfall = pd.concat([df_allsnapshots, df_prev_agg])
+
+    else:
+        dfall = df_prev_agg
 
     dfall.sort_index(inplace=True)
 

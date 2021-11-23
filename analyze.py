@@ -580,7 +580,23 @@ def analyse_top_x_snapshots(entity_type, date_axis_lim):
         log.info("custom time window for top %s plot: %s", entity_type, date_axis_lim)
         x_kwargs["scale"] = alt.Scale(domain=date_axis_lim)
 
-    panel_props = {"height": 300, "width": "container", "padding": 10}
+
+
+    # field=entity_type means for example `field="referrer"`. The melted data
+    # frame then has a column titled "referrer" with various values, for
+    # example "linkedin.com".
+    # selection_single_nearest = alt.selection_single(on='mouseover', nearest=True, field=entity_type)
+
+    panel_props = {
+        "height": 300,
+        "width": "container",
+        "padding": 10,
+        #"selection": selection_single_nearest
+    }
+
+    #log.info('df_melted:\n%s', df_melted)
+    #sys.exit()
+
     chart = (
         alt.Chart(df_melted)
         .mark_line(point=True)
@@ -593,8 +609,8 @@ def analyse_top_x_snapshots(entity_type, date_axis_lim):
         # timeout unit transformation. Ref:
         # https://altair-viz.github.io/user_guide/transform/timeunit.html
         .encode(
-            alt.X(**x_kwargs),
-            alt.Y(
+            x=alt.X(**x_kwargs),
+            y=alt.Y(
                 "views_unique_norm",
                 type="quantitative",
                 title="unique visitors per day (mean from last 14 days)",
@@ -603,7 +619,7 @@ def analyse_top_x_snapshots(entity_type, date_axis_lim):
                     zero=True,
                 ),
             ),
-            alt.Color(
+            color=alt.Color(
                 entity_type,
                 type="nominal",
                 sort=alt.SortField("order"),
@@ -615,8 +631,10 @@ def analyse_top_x_snapshots(entity_type, date_axis_lim):
                     # "legendX": 120,
                     # "legendY": 340,
                     "title": "Legend:"
-                } ,
+                },
             ),
+            tooltip=entity_type
+            #opacity=alt.condition(selection_single_nearest, alt.value(1), alt.value(0.1)),
         )
         .configure_point(size=30)
         .properties(**panel_props)

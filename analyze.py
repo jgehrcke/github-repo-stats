@@ -502,22 +502,23 @@ def analyse_top_x_snapshots(entity_type):
         k: v for k, v in sorted(max_vu_map.items(), key=lambda i: i[1], reverse=True)
     }
 
+    log.info(f'{entity_type}, highest views_unique seen: {sorted_dict}')
     top_n = 10
     top_n_enames = list(sorted_dict.keys())[:top_n]
 
-    # simulate a case where there are different timestamps across per-referrer
-    # dfs: copy a 'row', and re-insert it with a different timestamp.
-    # row = referrer_dfs["t.co"].take([-1])
-    # print(row)
-    # referrer_dfs["t.co"].loc["2020-12-30 12:25:08+00:00"] = row.iloc[0]
-    # print(referrer_dfs["t.co"])
+    # Build individual views_unique over time series. These series might have
+    # partially overlapping or non-overlapping datetime indices. Name these
+    # series (ename is for example 'linkedin.com' if this is a top_referrers
+    # analysis).
+    individual_series = [
+        pd.Series(entity_dfs[ename]["views_unique"], name=ename) for ename in top_n_enames
+    ]
 
-    df_top_vu = pd.DataFrame()
-    for ename in top_n_enames:
-        edf = entity_dfs[ename]
-        # print(edf)
-        df_top_vu[ename] = edf["views_unique"]
-    # del ename
+    # The individual series have overlapping or non-overlapping indices.
+    # Concatenate the series (along the right, i.e. add each series as
+    # individual column (which is why naming the series above is important)).
+    # This fills NaN values for individual columns where appropriate.
+    df_top_vu = pd.concat(individual_series, axis=1)
 
     log.info(
         "The top %s %s based on unique views, for the entire time range seen:\n%s",

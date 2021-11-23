@@ -494,7 +494,7 @@ def analyse_top_x_snapshots(entity_type):
     max_vu_map = {}
     for ename, edf in entity_dfs.items():
         max_vu_map[ename] = edf["views_unique"].max()
-    del ename
+    del ename, edf
 
     # Sort dict so that the first item is the referrer/path with the highest
     # views_unique seen.
@@ -503,6 +503,16 @@ def analyse_top_x_snapshots(entity_type):
     }
 
     log.info(f'{entity_type}, highest views_unique seen: {sorted_dict}')
+
+    # log.info(entity_dfs['linkedin.com'])
+    # log.info(entity_dfs['vega.github.io'])
+    # log.info(pd.concat(
+    #     [
+    #         pd.Series(entity_dfs['linkedin.com']["views_unique"], name='linkedin_com_views_unique') ,
+    #         pd.Series(entity_dfs['vega.github.io']["views_unique"], name='vega_views_unique')
+    #     ], axis=1))
+    # sys.exit()
+
     top_n = 10
     top_n_enames = list(sorted_dict.keys())[:top_n]
 
@@ -526,6 +536,7 @@ def analyse_top_x_snapshots(entity_type):
         entity_type,
         df_top_vu,
     )
+    # sys.exit()
 
     # For plotting with Altair, reshape the data using pd.melt() to combine the
     # multiple columns into one, where the referrer name is not a column label,

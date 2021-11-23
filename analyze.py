@@ -586,7 +586,7 @@ def analyse_top_x_snapshots(entity_type):
                 sort=alt.SortField("order"),
             ),
         )
-        .configure_point(size=50)
+        .configure_point(size=30)
         .properties(**panel_props)
     )
 
@@ -869,7 +869,7 @@ def analyse_view_clones_ts_fragments():
             )
         )
         .configure_axisY(labelBound=True)
-        .configure_point(size=100)
+        .configure_point(size=40)
         .properties(**panel_props)
     )
 
@@ -891,7 +891,7 @@ def analyse_view_clones_ts_fragments():
             )
         )
         .configure_axisY(labelBound=True)
-        .configure_point(size=100)
+        .configure_point(size=40)
         .properties(**panel_props)
     )
 
@@ -913,7 +913,7 @@ def analyse_view_clones_ts_fragments():
             )
         )
         .configure_axisY(labelBound=True)
-        .configure_point(size=100)
+        .configure_point(size=40)
         .properties(**panel_props)
     )
 
@@ -935,7 +935,7 @@ def analyse_view_clones_ts_fragments():
             )
         )
         .configure_axisY(labelBound=True)
-        .configure_point(size=100)
+        .configure_point(size=40)
         .properties(**panel_props)
     )
 
@@ -1011,7 +1011,7 @@ def add_stargazers_section(df, date_axis_lim):
                 ),
             ),
         )
-        .configure_point(size=100)
+        .configure_point(size=50)
         .properties(**panel_props)
     )
 
@@ -1067,7 +1067,7 @@ def add_fork_section(df, date_axis_lim):
                 ),
             ),
         )
-        .configure_point(size=100)
+        .configure_point(size=50)
         .properties(**panel_props)
     )
 

@@ -66,6 +66,13 @@ JS_FOOTER_LINES = []
 # graphics embedded in the PDF doc, instead of rasterized graphics.
 VEGA_EMBED_OPTIONS_JSON = json.dumps({"actions": False, "renderer": "svg"})
 
+DATETIME_AXIS_PROPERTIES = {
+    "field": "time",
+    "type": "temporal",
+    "title": "date",
+    "timeUnit": "yearmonthdate",
+    "axis": {"labelAngle": 25}
+}
 
 def main():
     if not os.environ.get("GHRS_GITHUB_API_TOKEN", None):
@@ -79,20 +86,20 @@ def main():
 
     gen_report_preamble()
 
-    analyse_view_clones_ts_fragments()
+    vc_date_axis_lim = analyse_view_clones_ts_fragments()
     report_pdf_pagebreak()
 
-    sf_date_axis_lim = None
-    if len(df_stargazers) and len(df_forks):
-        # Sync up the time window shown in the plots for forks and stars over time.
-        sf_date_axis_lim = gen_date_axis_lim((df_stargazers, df_forks))
-        log.info("time window for stargazer/fork plots: %s", sf_date_axis_lim)
+    # sf_date_axis_lim = None
+    # if len(df_stargazers) and len(df_forks):
+    #     # Sync up the time window shown in the plots for forks and stars over time.
+    #     sf_date_axis_lim = gen_date_axis_lim((df_stargazers, df_forks))
+    #     log.info("time window for stargazer/fork plots: %s", sf_date_axis_lim)
 
     if len(df_stargazers):
-        add_stargazers_section(df_stargazers, sf_date_axis_lim)
+        add_stargazers_section(df_stargazers, vc_date_axis_lim)
 
     if len(df_forks):
-        add_fork_section(df_forks, sf_date_axis_lim)
+        add_fork_section(df_forks, vc_date_axis_lim)
 
     report_pdf_pagebreak()
 
@@ -113,8 +120,8 @@ def main():
         )
     )
 
-    analyse_top_x_snapshots("referrer")
-    analyse_top_x_snapshots("path")
+    analyse_top_x_snapshots("referrer", vc_date_axis_lim)
+    analyse_top_x_snapshots("path", vc_date_axis_lim)
 
     gen_report_footer()
     finalize_and_render_report()
@@ -431,7 +438,7 @@ def _glob_csvpaths(basename_suffix):
     return csvpaths
 
 
-def analyse_top_x_snapshots(entity_type):
+def analyse_top_x_snapshots(entity_type, date_axis_lim):
     assert entity_type in ["referrer", "path"]
 
     log.info("read 'top %s' snapshots (CSV docs)", entity_type)
@@ -568,6 +575,11 @@ def analyse_top_x_snapshots(entity_type):
     #     # df_melted[df_melted["path"] == ""]["path"] = "/"
     #     df_melted["path"].replace("", "/", inplace=True)
 
+    x_kwargs = DATETIME_AXIS_PROPERTIES.copy()
+    if date_axis_lim is not None:
+        log.info("custom time window for top %s plot: %s", entity_type, date_axis_lim)
+        x_kwargs["scale"] = alt.Scale(domain=date_axis_lim)
+
     panel_props = {"height": 300, "width": "container", "padding": 10}
     chart = (
         alt.Chart(df_melted)
@@ -581,7 +593,7 @@ def analyse_top_x_snapshots(entity_type):
         # timeout unit transformation. Ref:
         # https://altair-viz.github.io/user_guide/transform/timeunit.html
         .encode(
-            alt.X("time", type="temporal", title="date", timeUnit="yearmonthdate"),
+            alt.X(**x_kwargs),
             alt.Y(
                 "views_unique_norm",
                 type="quantitative",
@@ -758,7 +770,6 @@ def analyse_view_clones_ts_fragments():
                 ARGS.views_clones_aggregate_inpath,
             )
 
-
     if len(dfs) == 0 and df_prev_agg is None:
         log.info("leave early: no data for views/clones: no snapshots, no previous aggregate")
         return
@@ -794,6 +805,13 @@ def analyse_view_clones_ts_fragments():
         dfall = df_prev_agg
 
     dfall.sort_index(inplace=True)
+
+    # Get time range, to be returned by this function. Used later for setting
+    # plot x_limit in all views/clones plot, but also in other plots in the
+    # report (views/clones is likely the most complete data -- i.e. the  widest
+    # time window).
+    date_axis_lim = gen_date_axis_lim((dfall, ))
+    log.info('time range of views/clones data: %s', date_axis_lim)
 
     log.info("shape of dataframe before dropping duplicates: %s", dfall.shape)
     # print(dfall)
@@ -881,12 +899,17 @@ def analyse_view_clones_ts_fragments():
 
     panel_props = {"height": PANEL_HEIGHT, "width": PANEL_WIDTH, "padding": 10}
 
+    x_kwargs = DATETIME_AXIS_PROPERTIES.copy()
+
+    # sync date axis range across all views/clone plots.
+    x_kwargs["scale"] = alt.Scale(domain=date_axis_lim)
+
     chart_clones_unique = (
         (
             alt.Chart(df_agg_clones)
             .mark_line(point=True)
             .encode(
-                alt.X("time", type="temporal", title="date", timeUnit="yearmonthdate"),
+                alt.X(**x_kwargs),
                 alt.Y(
                     "clones_unique",
                     type="quantitative",
@@ -908,7 +931,7 @@ def analyse_view_clones_ts_fragments():
             alt.Chart(df_agg_clones)
             .mark_line(point=True)
             .encode(
-                alt.X("time", type="temporal", title="date", timeUnit="yearmonthdate"),
+                alt.X(**x_kwargs),
                 alt.Y(
                     "clones_total",
                     type="quantitative",
@@ -930,7 +953,7 @@ def analyse_view_clones_ts_fragments():
             alt.Chart(df_agg_views)
             .mark_line(point=True)
             .encode(
-                alt.X("time", type="temporal", title="date", timeUnit="yearmonthdate"),
+                alt.X(**x_kwargs),
                 alt.Y(
                     "views_unique",
                     type="quantitative",
@@ -952,7 +975,7 @@ def analyse_view_clones_ts_fragments():
             alt.Chart(df_agg_views)
             .mark_line(point=True)
             .encode(
-                alt.X("time", type="temporal", title="date", timeUnit="yearmonthdate"),
+                alt.X(**x_kwargs),
                 alt.Y(
                     "views_total",
                     type="quantitative",
@@ -1010,16 +1033,13 @@ def analyse_view_clones_ts_fragments():
         ]
     )
 
+    return date_axis_lim
+
 
 def add_stargazers_section(df, date_axis_lim):
     # date_axis_lim is expected to be of the form ["2019-01-01", "2019-12-31"]
 
-    x_kwargs = {
-        "field": "time",
-        "type": "temporal",
-        "title": "date",
-        "timeUnit": "yearmonthdate",
-    }
+    x_kwargs = DATETIME_AXIS_PROPERTIES.copy()
 
     if date_axis_lim is not None:
         log.info("custom time window for stargazer plot: %s", date_axis_lim)
@@ -1070,12 +1090,7 @@ def add_stargazers_section(df, date_axis_lim):
 def add_fork_section(df, date_axis_lim):
     # date_axis_lim is expected to be of the form ["2019-01-01", "2019-12-31"])
 
-    x_kwargs = {
-        "field": "time",
-        "type": "temporal",
-        "title": "date",
-        "timeUnit": "yearmonthdate",
-    }
+    x_kwargs = DATETIME_AXIS_PROPERTIES.copy()
 
     if date_axis_lim:
         log.info("custom time window for fork plot: %s", date_axis_lim)

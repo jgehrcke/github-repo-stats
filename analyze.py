@@ -569,40 +569,27 @@ def analyse_top_x_snapshots(entity_type, date_axis_lim):
     # plot that this is a _mean_ value derived from the _last 14 days_.
     df_melted["views_unique_norm"] = df_melted["views_unique"] / 14.0
 
-    # For paths, it's relevant to identify the common prefix (repo owner/name)
+    # TODO: decide between 'linear' and 'symlog' axis based on the value range
+    rmin = df_melted["views_unique_norm"].min()
+    rmax = df_melted["views_unique_norm"].max()
+    log.info(f'min: {rmin}, max: {rmax}')
 
-    # cmn_ename_prefix = os.path.commonprefix(list(unique_entity_names))
-    # log.info("cmn_ename_prefix: %s", cmn_ename_prefix)
-
-    # if entity_type == "path":
-    #     log.info("remove common path prefix")
-    #     df_melted["path"] = df_melted["path"].str.slice(start=len(cmn_ename_prefix))
-    #     # The root path (e.g., `owner/repo`) is not an empty string. That's
-    #     # not so cool, make the root be represented by a single slash.
-    #     # df_melted[df_melted["path"] == ""]["path"] = "/"
-    #     df_melted["path"].replace("", "/", inplace=True)
+    y_axis_scale_type = "linear"
+    #if math.log(rmax - rmin, 10) > 0.7:
+    if rmax - rmin > 5:
+        log.info('switch to using symlog scale')
+        y_axis_scale_type = "symlog"
 
     x_kwargs = DATETIME_AXIS_PROPERTIES.copy()
     if date_axis_lim is not None:
         log.info("custom time window for top %s plot: %s", entity_type, date_axis_lim)
         x_kwargs["scale"] = alt.Scale(domain=date_axis_lim)
 
-
-
-    # field=entity_type means for example `field="referrer"`. The melted data
-    # frame then has a column titled "referrer" with various values, for
-    # example "linkedin.com".
-    # selection_single_nearest = alt.selection_single(on='mouseover', nearest=True, field=entity_type)
-
     panel_props = {
         "height": 300,
         "width": "container",
         "padding": 10,
-        #"selection": selection_single_nearest
     }
-
-    #log.info('df_melted:\n%s', df_melted)
-    #sys.exit()
 
     chart = (
         alt.Chart(df_melted)
@@ -624,6 +611,7 @@ def analyse_top_x_snapshots(entity_type, date_axis_lim):
                 scale=alt.Scale(
                     domain=(0, df_melted["views_unique_norm"].max() * 1.1),
                     zero=True,
+                    type=y_axis_scale_type
                 ),
             ),
             color=alt.Color(
@@ -640,7 +628,6 @@ def analyse_top_x_snapshots(entity_type, date_axis_lim):
                     "title": "Legend:"
                 },
             ),
-            #opacity=alt.condition(selection_single_nearest, alt.value(1), alt.value(0.1)),
             tooltip=[entity_type, alt.Tooltip("views_unique_norm:Q", format='.2f', title="views")]
         )
         .configure_point(size=30)

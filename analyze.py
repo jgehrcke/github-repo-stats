@@ -687,7 +687,7 @@ def analyse_view_clones_ts_fragments():
     basename_suffix = "_views_clones_series_fragment.csv"
     csvpaths = _glob_csvpaths(basename_suffix)
 
-    dfs = []
+    snapshot_dfs = []
     column_names_seen = set()
 
     for p in csvpaths:
@@ -758,17 +758,17 @@ def analyse_view_clones_ts_fragments():
             )
             sys.exit(1)
 
-        dfs.append(df)
+        snapshot_dfs.append(df)
 
-    # for df in dfs:
+    # for df in snapshot_dfs:
     #     print(df)
 
-    log.info("total sample count: %s", sum(len(df) for df in dfs))
+    log.info("total sample count: %s", sum(len(df) for df in snapshot_dfs))
 
-    if len(dfs) == 0:
+    if len(snapshot_dfs) == 0:
         log.info("special case: no snapshots read for views/clones")
     else:
-        newest_snapshot_time = max(df.attrs["snapshot_time"] for df in dfs)
+        newest_snapshot_time = max(df.attrs["snapshot_time"] for df in snapshot_dfs)
         log.info("time of newest snapshot: %s", newest_snapshot_time)
 
     # Read previously created views/clones aggregate file if it exists.
@@ -788,12 +788,12 @@ def analyse_view_clones_ts_fragments():
                 ARGS.views_clones_aggregate_inpath,
             )
 
-    if len(dfs) == 0 and df_prev_agg is None:
+    if len(snapshot_dfs) == 0 and df_prev_agg is None:
         log.info("leave early: no data for views/clones: no snapshots, no previous aggregate")
         return
 
     log.info("build aggregate, drop duplicate data")
-    # Each dataframe in `dfs` corresponds to one time series fragment
+    # Each dataframe in `snapshot_dfs` corresponds to one time series fragment
     # ("snapshot") obtained from the GitHub API. Each time series fragment
     # contains 15 samples (rows), with two adjacent samples being 24 hours
     # apart. Ideally, the time series fragments overlap in time. They overlap
@@ -802,10 +802,10 @@ def analyse_view_clones_ts_fragments():
     # are expected to be "the same" as in the snapshot taken the day before).
     # Stich these fragments together (with a buch of "duplicate samples), and
     # then sort this result by time.
-    if len(dfs):
+    if len(snapshot_dfs):
         # combine all snapshots
-        log.info("pd.concat(dfs)")
-        df_allsnapshots = pd.concat(dfs)
+        log.info("pd.concat(snapshot_dfs)")
+        df_allsnapshots = pd.concat(snapshot_dfs)
 
         # Combine the result of combine-all-snapshots with previous aggregate
         dfall = df_allsnapshots

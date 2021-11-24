@@ -807,7 +807,8 @@ def analyse_view_clones_ts_fragments():
         log.info("pd.concat(dfs)")
         df_allsnapshots = pd.concat(dfs)
 
-        # combine the result of combine-all-snapshots with previous aggregate
+        # Combine the result of combine-all-snapshots with previous aggregate
+        dfall = df_allsnapshots
         if df_prev_agg is not None:
             if set(df_prev_agg.columns) != set(df_allsnapshots.columns):
                 log.error(

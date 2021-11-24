@@ -935,6 +935,10 @@ def analyse_view_clones_ts_fragments():
                         type=yaxistype
                     ),
                 ),
+                tooltip=[
+                    alt.Tooltip("clones_unique:Q", format='.1f', title="clones (u)"),
+                    alt.Tooltip("time:T", format='%B %e, %Y', title="date")
+                ]
             )
         )
         .configure_axisY(labelBound=True)
@@ -963,6 +967,10 @@ def analyse_view_clones_ts_fragments():
                         type=yaxistype
                     ),
                 ),
+                tooltip=[
+                    alt.Tooltip("clones_total:Q", format='.1f', title="clones (t)"),
+                    alt.Tooltip("time:T", format='%B %e, %Y', title="date")
+                ]
             )
         )
         .configure_axisY(labelBound=True)
@@ -991,6 +999,10 @@ def analyse_view_clones_ts_fragments():
                         type=yaxistype
                     ),
                 ),
+                tooltip=[
+                    alt.Tooltip("views_unique:Q", format='.1f', title="views (u)"),
+                    alt.Tooltip("time:T", format='%B %e, %Y', title="date")
+                ]
             )
         )
         .configure_axisY(labelBound=True)
@@ -1019,6 +1031,10 @@ def analyse_view_clones_ts_fragments():
                         type=yaxistype
                     ),
                 ),
+                tooltip=[
+                    alt.Tooltip("views_total:Q", format='.1f', title="views (t)"),
+                    alt.Tooltip("time:T", format='%B %e, %Y', title="date")
+                ]
             )
         )
         .configure_axisY(labelBound=True)
@@ -1094,6 +1110,10 @@ def add_stargazers_section(df, date_axis_lim):
                     zero=True,
                 ),
             ),
+            tooltip=[
+                alt.Tooltip("stars_cumulative:Q", format='d', title="stars"),
+                alt.Tooltip("time:T", format='%B %e, %Y', title="date")
+            ]
         )
         .configure_point(size=50)
         .properties(**panel_props)
@@ -1145,6 +1165,10 @@ def add_fork_section(df, date_axis_lim):
                     zero=True,
                 ),
             ),
+            tooltip=[
+                alt.Tooltip("forks_cumulative:Q", format='d', title="forks"),
+                alt.Tooltip("time:T", format='%B %e, %Y', title="date")
+            ]
         )
         .configure_point(size=50)
         .properties(**panel_props)

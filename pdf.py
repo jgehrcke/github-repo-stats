@@ -125,7 +125,7 @@ def send_print_request(driver):
 
     url = (
         driver.command_executor._url
-        + "/session/%s/chromium/send_command_and_get_result" % driver.session_id
+        + f"/session/{driver.session_id}/chromium/send_command_and_get_result"
     )
 
     log.info("send Page.printToPDF webdriver request to %s", url)

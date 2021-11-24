@@ -66,6 +66,13 @@ JS_FOOTER_LINES = []
 # graphics embedded in the PDF doc, instead of rasterized graphics.
 VEGA_EMBED_OPTIONS_JSON = json.dumps({"actions": False, "renderer": "svg"})
 
+DATETIME_AXIS_PROPERTIES = {
+    "field": "time",
+    "type": "temporal",
+    "title": "date",
+    "timeUnit": "yearmonthdate",
+    "axis": {"labelAngle": 25}
+}
 
 def main():
     if not os.environ.get("GHRS_GITHUB_API_TOKEN", None):
@@ -79,20 +86,20 @@ def main():
 
     gen_report_preamble()
 
-    analyse_view_clones_ts_fragments()
+    vc_date_axis_lim = analyse_view_clones_ts_fragments()
     report_pdf_pagebreak()
 
-    sf_date_axis_lim = None
-    if len(df_stargazers) and len(df_forks):
-        # Sync up the time window shown in the plots for forks and stars over time.
-        sf_date_axis_lim = gen_date_axis_lim((df_stargazers, df_forks))
-        log.info("time window for stargazer/fork plots: %s", sf_date_axis_lim)
+    # sf_date_axis_lim = None
+    # if len(df_stargazers) and len(df_forks):
+    #     # Sync up the time window shown in the plots for forks and stars over time.
+    #     sf_date_axis_lim = gen_date_axis_lim((df_stargazers, df_forks))
+    #     log.info("time window for stargazer/fork plots: %s", sf_date_axis_lim)
 
     if len(df_stargazers):
-        add_stargazers_section(df_stargazers, sf_date_axis_lim)
+        add_stargazers_section(df_stargazers, vc_date_axis_lim)
 
     if len(df_forks):
-        add_fork_section(df_forks, sf_date_axis_lim)
+        add_fork_section(df_forks, vc_date_axis_lim)
 
     report_pdf_pagebreak()
 
@@ -113,8 +120,8 @@ def main():
         )
     )
 
-    analyse_top_x_snapshots("referrer")
-    analyse_top_x_snapshots("path")
+    analyse_top_x_snapshots("referrer", vc_date_axis_lim)
+    analyse_top_x_snapshots("path", vc_date_axis_lim)
 
     gen_report_footer()
     finalize_and_render_report()
@@ -431,7 +438,7 @@ def _glob_csvpaths(basename_suffix):
     return csvpaths
 
 
-def analyse_top_x_snapshots(entity_type):
+def analyse_top_x_snapshots(entity_type, date_axis_lim):
     assert entity_type in ["referrer", "path"]
 
     log.info("read 'top %s' snapshots (CSV docs)", entity_type)
@@ -494,7 +501,7 @@ def analyse_top_x_snapshots(entity_type):
     max_vu_map = {}
     for ename, edf in entity_dfs.items():
         max_vu_map[ename] = edf["views_unique"].max()
-    del ename
+    del ename, edf
 
     # Sort dict so that the first item is the referrer/path with the highest
     # views_unique seen.
@@ -502,22 +509,33 @@ def analyse_top_x_snapshots(entity_type):
         k: v for k, v in sorted(max_vu_map.items(), key=lambda i: i[1], reverse=True)
     }
 
+    log.info(f'{entity_type}, highest views_unique seen: {sorted_dict}')
+
+    # log.info(entity_dfs['linkedin.com'])
+    # log.info(entity_dfs['vega.github.io'])
+    # log.info(pd.concat(
+    #     [
+    #         pd.Series(entity_dfs['linkedin.com']["views_unique"], name='linkedin_com_views_unique') ,
+    #         pd.Series(entity_dfs['vega.github.io']["views_unique"], name='vega_views_unique')
+    #     ], axis=1))
+    # sys.exit()
+
     top_n = 10
     top_n_enames = list(sorted_dict.keys())[:top_n]
 
-    # simulate a case where there are different timestamps across per-referrer
-    # dfs: copy a 'row', and re-insert it with a different timestamp.
-    # row = referrer_dfs["t.co"].take([-1])
-    # print(row)
-    # referrer_dfs["t.co"].loc["2020-12-30 12:25:08+00:00"] = row.iloc[0]
-    # print(referrer_dfs["t.co"])
+    # Build individual views_unique over time series. These series might have
+    # partially overlapping or non-overlapping datetime indices. Name these
+    # series (ename is for example 'linkedin.com' if this is a top_referrers
+    # analysis).
+    individual_series = [
+        pd.Series(entity_dfs[ename]["views_unique"], name=ename) for ename in top_n_enames
+    ]
 
-    df_top_vu = pd.DataFrame()
-    for ename in top_n_enames:
-        edf = entity_dfs[ename]
-        # print(edf)
-        df_top_vu[ename] = edf["views_unique"]
-    # del ename
+    # The individual series have overlapping or non-overlapping indices.
+    # Concatenate the series (along the right, i.e. add each series as
+    # individual column (which is why naming the series above is important)).
+    # This fills NaN values for individual columns where appropriate.
+    df_top_vu = pd.concat(individual_series, axis=1)
 
     log.info(
         "The top %s %s based on unique views, for the entire time range seen:\n%s",
@@ -525,6 +543,7 @@ def analyse_top_x_snapshots(entity_type):
         entity_type,
         df_top_vu,
     )
+    # sys.exit()
 
     # For plotting with Altair, reshape the data using pd.melt() to combine the
     # multiple columns into one, where the referrer name is not a column label,
@@ -556,7 +575,28 @@ def analyse_top_x_snapshots(entity_type):
     #     # df_melted[df_melted["path"] == ""]["path"] = "/"
     #     df_melted["path"].replace("", "/", inplace=True)
 
-    panel_props = {"height": 300, "width": "container", "padding": 10}
+    x_kwargs = DATETIME_AXIS_PROPERTIES.copy()
+    if date_axis_lim is not None:
+        log.info("custom time window for top %s plot: %s", entity_type, date_axis_lim)
+        x_kwargs["scale"] = alt.Scale(domain=date_axis_lim)
+
+
+
+    # field=entity_type means for example `field="referrer"`. The melted data
+    # frame then has a column titled "referrer" with various values, for
+    # example "linkedin.com".
+    # selection_single_nearest = alt.selection_single(on='mouseover', nearest=True, field=entity_type)
+
+    panel_props = {
+        "height": 300,
+        "width": "container",
+        "padding": 10,
+        #"selection": selection_single_nearest
+    }
+
+    #log.info('df_melted:\n%s', df_melted)
+    #sys.exit()
+
     chart = (
         alt.Chart(df_melted)
         .mark_line(point=True)
@@ -569,8 +609,8 @@ def analyse_top_x_snapshots(entity_type):
         # timeout unit transformation. Ref:
         # https://altair-viz.github.io/user_guide/transform/timeunit.html
         .encode(
-            alt.X("time", type="temporal", title="date", timeUnit="yearmonthdate"),
-            alt.Y(
+            x=alt.X(**x_kwargs),
+            y=alt.Y(
                 "views_unique_norm",
                 type="quantitative",
                 title="unique visitors per day (mean from last 14 days)",
@@ -579,13 +619,24 @@ def analyse_top_x_snapshots(entity_type):
                     zero=True,
                 ),
             ),
-            alt.Color(
+            color=alt.Color(
                 entity_type,
                 type="nominal",
                 sort=alt.SortField("order"),
+                # https://vega.github.io/vega-lite/docs/legend.html#legend-properties
+                legend={
+                    #"orient": "bottom",
+                    "orient": "top",
+                    "direction": "vertical",
+                    # "legendX": 120,
+                    # "legendY": 340,
+                    "title": "Legend:"
+                },
             ),
+            tooltip=entity_type
+            #opacity=alt.condition(selection_single_nearest, alt.value(1), alt.value(0.1)),
         )
-        .configure_point(size=50)
+        .configure_point(size=30)
         .properties(**panel_props)
     )
 
@@ -636,7 +687,7 @@ def analyse_view_clones_ts_fragments():
     basename_suffix = "_views_clones_series_fragment.csv"
     csvpaths = _glob_csvpaths(basename_suffix)
 
-    dfs = []
+    snapshot_dfs = []
     column_names_seen = set()
 
     for p in csvpaths:
@@ -707,19 +758,20 @@ def analyse_view_clones_ts_fragments():
             )
             sys.exit(1)
 
-        dfs.append(df)
+        snapshot_dfs.append(df)
 
-    # for df in dfs:
+    # for df in snapshot_dfs:
     #     print(df)
 
-    log.info("total sample count: %s", sum(len(df) for df in dfs))
+    log.info("total sample count: %s", sum(len(df) for df in snapshot_dfs))
 
-    if len(dfs) == 0:
-        log.info("leave early: no data for views/clones")
-        return
+    if len(snapshot_dfs) == 0:
+        log.info("special case: no snapshots read for views/clones")
+    else:
+        newest_snapshot_time = max(df.attrs["snapshot_time"] for df in snapshot_dfs)
+        log.info("time of newest snapshot: %s", newest_snapshot_time)
 
-    newest_snapshot_time = max(df.attrs["snapshot_time"] for df in dfs)
-
+    # Read previously created views/clones aggregate file if it exists.
     df_prev_agg = None
     if ARGS.views_clones_aggregate_inpath:
         if os.path.exists(ARGS.views_clones_aggregate_inpath):
@@ -736,10 +788,12 @@ def analyse_view_clones_ts_fragments():
                 ARGS.views_clones_aggregate_inpath,
             )
 
-    log.info("time of newest snapshot: %s", newest_snapshot_time)
-    log.info("build aggregate, drop duplicate data")
+    if len(snapshot_dfs) == 0 and df_prev_agg is None:
+        log.info("leave early: no data for views/clones: no snapshots, no previous aggregate")
+        return
 
-    # Each dataframe in `dfs` corresponds to one time series fragment
+    log.info("build aggregate, drop duplicate data")
+    # Each dataframe in `snapshot_dfs` corresponds to one time series fragment
     # ("snapshot") obtained from the GitHub API. Each time series fragment
     # contains 15 samples (rows), with two adjacent samples being 24 hours
     # apart. Ideally, the time series fragments overlap in time. They overlap
@@ -748,21 +802,35 @@ def analyse_view_clones_ts_fragments():
     # are expected to be "the same" as in the snapshot taken the day before).
     # Stich these fragments together (with a buch of "duplicate samples), and
     # then sort this result by time.
-    log.info("pd.concat(dfs)")
-    dfall = pd.concat(dfs)
+    if len(snapshot_dfs):
+        # combine all snapshots
+        log.info("pd.concat(snapshot_dfs)")
+        df_allsnapshots = pd.concat(snapshot_dfs)
 
-    if df_prev_agg is not None:
-        if set(df_prev_agg.columns) != set(dfall.columns):
-            log.error(
-                "set(df_prev_agg.columns) != set (dfall.columns): %s, %s",
-                df_prev_agg.columns,
-                dfall.columns,
-            )
-            sys.exit(1)
-        log.info("pd.concat(dfall, df_prev_agg)")
-        dfall = pd.concat([dfall, df_prev_agg])
+        # Combine the result of combine-all-snapshots with previous aggregate
+        dfall = df_allsnapshots
+        if df_prev_agg is not None:
+            if set(df_prev_agg.columns) != set(df_allsnapshots.columns):
+                log.error(
+                    "set(df_prev_agg.columns) != set (dfall.columns): %s, %s",
+                    df_prev_agg.columns,
+                    df_allsnapshots.columns,
+                )
+                sys.exit(1)
+            log.info("pd.concat(dfall, df_prev_agg)")
+            dfall = pd.concat([df_allsnapshots, df_prev_agg])
+
+    else:
+        dfall = df_prev_agg
 
     dfall.sort_index(inplace=True)
+
+    # Get time range, to be returned by this function. Used later for setting
+    # plot x_limit in all views/clones plot, but also in other plots in the
+    # report (views/clones is likely the most complete data -- i.e. the  widest
+    # time window).
+    date_axis_lim = gen_date_axis_lim((dfall, ))
+    log.info('time range of views/clones data: %s', date_axis_lim)
 
     log.info("shape of dataframe before dropping duplicates: %s", dfall.shape)
     # print(dfall)
@@ -850,12 +918,17 @@ def analyse_view_clones_ts_fragments():
 
     panel_props = {"height": PANEL_HEIGHT, "width": PANEL_WIDTH, "padding": 10}
 
+    x_kwargs = DATETIME_AXIS_PROPERTIES.copy()
+
+    # sync date axis range across all views/clone plots.
+    x_kwargs["scale"] = alt.Scale(domain=date_axis_lim)
+
     chart_clones_unique = (
         (
             alt.Chart(df_agg_clones)
             .mark_line(point=True)
             .encode(
-                alt.X("time", type="temporal", title="date", timeUnit="yearmonthdate"),
+                alt.X(**x_kwargs),
                 alt.Y(
                     "clones_unique",
                     type="quantitative",
@@ -868,7 +941,7 @@ def analyse_view_clones_ts_fragments():
             )
         )
         .configure_axisY(labelBound=True)
-        .configure_point(size=100)
+        .configure_point(size=40)
         .properties(**panel_props)
     )
 
@@ -877,7 +950,7 @@ def analyse_view_clones_ts_fragments():
             alt.Chart(df_agg_clones)
             .mark_line(point=True)
             .encode(
-                alt.X("time", type="temporal", title="date", timeUnit="yearmonthdate"),
+                alt.X(**x_kwargs),
                 alt.Y(
                     "clones_total",
                     type="quantitative",
@@ -890,7 +963,7 @@ def analyse_view_clones_ts_fragments():
             )
         )
         .configure_axisY(labelBound=True)
-        .configure_point(size=100)
+        .configure_point(size=40)
         .properties(**panel_props)
     )
 
@@ -899,7 +972,7 @@ def analyse_view_clones_ts_fragments():
             alt.Chart(df_agg_views)
             .mark_line(point=True)
             .encode(
-                alt.X("time", type="temporal", title="date", timeUnit="yearmonthdate"),
+                alt.X(**x_kwargs),
                 alt.Y(
                     "views_unique",
                     type="quantitative",
@@ -912,7 +985,7 @@ def analyse_view_clones_ts_fragments():
             )
         )
         .configure_axisY(labelBound=True)
-        .configure_point(size=100)
+        .configure_point(size=40)
         .properties(**panel_props)
     )
 
@@ -921,7 +994,7 @@ def analyse_view_clones_ts_fragments():
             alt.Chart(df_agg_views)
             .mark_line(point=True)
             .encode(
-                alt.X("time", type="temporal", title="date", timeUnit="yearmonthdate"),
+                alt.X(**x_kwargs),
                 alt.Y(
                     "views_total",
                     type="quantitative",
@@ -934,7 +1007,7 @@ def analyse_view_clones_ts_fragments():
             )
         )
         .configure_axisY(labelBound=True)
-        .configure_point(size=100)
+        .configure_point(size=40)
         .properties(**panel_props)
     )
 
@@ -979,16 +1052,13 @@ def analyse_view_clones_ts_fragments():
         ]
     )
 
+    return date_axis_lim
+
 
 def add_stargazers_section(df, date_axis_lim):
     # date_axis_lim is expected to be of the form ["2019-01-01", "2019-12-31"]
 
-    x_kwargs = {
-        "field": "time",
-        "type": "temporal",
-        "title": "date",
-        "timeUnit": "yearmonthdate",
-    }
+    x_kwargs = DATETIME_AXIS_PROPERTIES.copy()
 
     if date_axis_lim is not None:
         log.info("custom time window for stargazer plot: %s", date_axis_lim)
@@ -1010,7 +1080,7 @@ def add_stargazers_section(df, date_axis_lim):
                 ),
             ),
         )
-        .configure_point(size=100)
+        .configure_point(size=50)
         .properties(**panel_props)
     )
 
@@ -1039,12 +1109,7 @@ def add_stargazers_section(df, date_axis_lim):
 def add_fork_section(df, date_axis_lim):
     # date_axis_lim is expected to be of the form ["2019-01-01", "2019-12-31"])
 
-    x_kwargs = {
-        "field": "time",
-        "type": "temporal",
-        "title": "date",
-        "timeUnit": "yearmonthdate",
-    }
+    x_kwargs = DATETIME_AXIS_PROPERTIES.copy()
 
     if date_axis_lim:
         log.info("custom time window for fork plot: %s", date_axis_lim)
@@ -1066,7 +1131,7 @@ def add_fork_section(df, date_axis_lim):
                 ),
             ),
         )
-        .configure_point(size=100)
+        .configure_point(size=50)
         .properties(**panel_props)
     )
 
@@ -1166,7 +1231,7 @@ def get_stars_over_time():
         # reliably.
         df_for_csv_file = resample_to_1d_resolution(df, "stars_cumulative").astype(int)
         log.info("stars_cumulative, for CSV file (resampled): %s", df_for_csv_file)
-        log.info("write aggregate to %s", ARGS.views_clones_aggregate_outpath)
+        log.info("write aggregate to %s", ARGS.stargazer_ts_resampled_outpath)
         # Pragmatic strategy against partial write / encoding problems.
         tpath = ARGS.stargazer_ts_resampled_outpath + ".tmp"
         df_for_csv_file.to_csv(tpath, index_label="time_iso8601")
@@ -1336,7 +1401,7 @@ def parse_args():
 
     parser.add_argument(
         "snapshotdir",
-        metavar="PATH",
+        metavar="SNAPSHOT_DIR_PATH",
         help="path to directory containing CSV files of data snapshots / time series fragments, obtained via fetch.py",
     )
 

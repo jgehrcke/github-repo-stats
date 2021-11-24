@@ -500,6 +500,13 @@ def analyse_top_x_snapshots(entity_type, date_axis_lim):
 
     max_vu_map = {}
     for ename, edf in entity_dfs.items():
+        # TODO: do not pick max() value across time series for top-n
+        # consideration. That represents a peak, a single point in time which
+        # could be long ago. It's more meaningful to integerate over time,
+        # considering the entire time frame. That however might put a little
+        # too much weight on the past, too -- so maybe perform two
+        # integrations: entire time frame, and last three weeks. Build top N
+        # for both of these, and then merge.
         max_vu_map[ename] = edf["views_unique"].max()
     del ename, edf
 

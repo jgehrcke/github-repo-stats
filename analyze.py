@@ -66,13 +66,15 @@ JS_FOOTER_LINES = []
 # graphics embedded in the PDF doc, instead of rasterized graphics.
 VEGA_EMBED_OPTIONS_JSON = json.dumps({"actions": False, "renderer": "svg"})
 
+DATE_LABEL_ANGLE = 25
 DATETIME_AXIS_PROPERTIES = {
     "field": "time",
     "type": "temporal",
     "title": "date",
     "timeUnit": "yearmonthdate",
-    "axis": {"labelAngle": 25}
+    "axis": {"labelAngle": DATE_LABEL_ANGLE}
 }
+
 
 def main():
     if not os.environ.get("GHRS_GITHUB_API_TOKEN", None):
@@ -569,16 +571,7 @@ def analyse_top_x_snapshots(entity_type, date_axis_lim):
     # plot that this is a _mean_ value derived from the _last 14 days_.
     df_melted["views_unique_norm"] = df_melted["views_unique"] / 14.0
 
-    # TODO: decide between 'linear' and 'symlog' axis based on the value range
-    rmin = df_melted["views_unique_norm"].min()
-    rmax = df_melted["views_unique_norm"].max()
-    log.info(f'min: {rmin}, max: {rmax}')
-
-    y_axis_scale_type = "linear"
-    #if math.log(rmax - rmin, 10) > 0.7:
-    if rmax - rmin > 5:
-        log.info('switch to using symlog scale')
-        y_axis_scale_type = "symlog"
+    y_axis_scale_type = symlog_or_lin(df_melted, "views_unique_norm", 5)
 
     x_kwargs = DATETIME_AXIS_PROPERTIES.copy()
     if date_axis_lim is not None:
@@ -628,7 +621,11 @@ def analyse_top_x_snapshots(entity_type, date_axis_lim):
                     "title": "Legend:"
                 },
             ),
-            tooltip=[entity_type, alt.Tooltip("views_unique_norm:Q", format='.2f', title="views")]
+            tooltip=[
+                entity_type,
+                alt.Tooltip("views_unique_norm:Q", format='.2f', title="views (14d mean)"),
+                alt.Tooltip("time:T", format='%B %e, %Y', title="date")
+            ]
         )
         .configure_point(size=30)
         .properties(**panel_props)
@@ -917,6 +914,10 @@ def analyse_view_clones_ts_fragments():
     # sync date axis range across all views/clone plots.
     x_kwargs["scale"] = alt.Scale(domain=date_axis_lim)
 
+    yaxis = alt.Axis()
+    yaxistype = symlog_or_lin(df_agg_clones, "clones_unique", 30)
+    if yaxistype == "symlog":
+        yaxis = alt.Axis(values=[1, 10, 50, 100, 500, 1000, 5000, 10000])
     chart_clones_unique = (
         (
             alt.Chart(df_agg_clones)
@@ -927,9 +928,11 @@ def analyse_view_clones_ts_fragments():
                     "clones_unique",
                     type="quantitative",
                     title="unique clones per day",
+                    axis=yaxis,
                     scale=alt.Scale(
                         domain=(0, df_agg_clones["clones_unique"].max() * 1.1),
                         zero=True,
+                        type=yaxistype
                     ),
                 ),
             )
@@ -939,6 +942,10 @@ def analyse_view_clones_ts_fragments():
         .properties(**panel_props)
     )
 
+    yaxis = alt.Axis()
+    yaxistype = symlog_or_lin(df_agg_clones, "clones_total", 30)
+    if yaxistype == "symlog":
+        yaxis = alt.Axis(values=[1, 10, 50, 100, 500, 1000, 5000, 10000])
     chart_clones_total = (
         (
             alt.Chart(df_agg_clones)
@@ -949,9 +956,11 @@ def analyse_view_clones_ts_fragments():
                     "clones_total",
                     type="quantitative",
                     title="total clones per day",
+                    axis=yaxis,
                     scale=alt.Scale(
                         domain=(0, df_agg_clones["clones_total"].max() * 1.1),
                         zero=True,
+                        type=yaxistype
                     ),
                 ),
             )
@@ -961,6 +970,10 @@ def analyse_view_clones_ts_fragments():
         .properties(**panel_props)
     )
 
+    yaxis = alt.Axis()
+    yaxistype = symlog_or_lin(df_agg_views, "views_unique", 30)
+    if yaxistype == "symlog":
+        yaxis = alt.Axis(values=[1, 10, 50, 100, 500, 1000, 5000, 10000])
     chart_views_unique = (
         (
             alt.Chart(df_agg_views)
@@ -971,9 +984,11 @@ def analyse_view_clones_ts_fragments():
                     "views_unique",
                     type="quantitative",
                     title="unique views per day",
+                    axis=yaxis,
                     scale=alt.Scale(
                         domain=(0, df_agg_views["views_unique"].max() * 1.1),
                         zero=True,
+                        type=yaxistype
                     ),
                 ),
             )
@@ -983,6 +998,10 @@ def analyse_view_clones_ts_fragments():
         .properties(**panel_props)
     )
 
+    yaxis = alt.Axis()
+    yaxistype = symlog_or_lin(df_agg_views, "views_total", 30)
+    if yaxistype == "symlog":
+        yaxis = alt.Axis(values=[1, 10, 50, 100, 500, 1000, 5000, 10000])
     chart_views_total = (
         (
             alt.Chart(df_agg_views)
@@ -993,9 +1012,11 @@ def analyse_view_clones_ts_fragments():
                     "views_total",
                     type="quantitative",
                     title="total views per day",
+                    axis=yaxis,
                     scale=alt.Scale(
                         domain=(0, df_agg_views["views_total"].max() * 1.1),
                         zero=True,
+                        type=yaxistype
                     ),
                 ),
             )
@@ -1150,6 +1171,19 @@ def add_fork_section(df, date_axis_lim):
         f"vegaEmbed('#chart_forks', {chart_spec}, {VEGA_EMBED_OPTIONS_JSON}).catch(console.error);"
     )
 
+
+def symlog_or_lin(df, colname, threshold):
+    # TODO: decide between 'linear' and 'symlog' axis based on the value range
+    rmin = df[colname].min()
+    rmax = df[colname].max()
+    log.info(f'df[{colname}] min: {rmin}, max: {rmax}')
+
+    if rmax - rmin > threshold:
+        log.info(f'df[{colname}]: use symlog scale, because range > {threshold}')
+        return "symlog"
+
+    log.info(f'df[{colname}]: use linear scale')
+    return "linear"
 
 def get_stars_over_time():
     # TODO: for ~10k stars repositories, this operation is too costly for doing

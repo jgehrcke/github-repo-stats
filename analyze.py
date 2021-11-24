@@ -633,8 +633,8 @@ def analyse_top_x_snapshots(entity_type, date_axis_lim):
                     "title": "Legend:"
                 },
             ),
-            tooltip=entity_type
             #opacity=alt.condition(selection_single_nearest, alt.value(1), alt.value(0.1)),
+            tooltip=[entity_type, alt.Tooltip("views_unique_norm:Q", format='.2f', title="views")]
         )
         .configure_point(size=30)
         .properties(**panel_props)

@@ -1,0 +1,4 @@
+[flake8]
+max-line-length = 130
+ignore = E203 # conflict with black, also see https://github.com/psf/black/issues/315
+

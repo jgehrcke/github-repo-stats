@@ -72,7 +72,7 @@ DATETIME_AXIS_PROPERTIES = {
     "type": "temporal",
     "title": "date",
     "timeUnit": "yearmonthdate",
-    "axis": {"labelAngle": DATE_LABEL_ANGLE}
+    "axis": {"labelAngle": DATE_LABEL_ANGLE},
 }
 
 
@@ -518,7 +518,7 @@ def analyse_top_x_snapshots(entity_type, date_axis_lim):
         k: v for k, v in sorted(max_vu_map.items(), key=lambda i: i[1], reverse=True)
     }
 
-    log.info(f'{entity_type}, highest views_unique seen: {sorted_dict}')
+    log.info(f"{entity_type}, highest views_unique seen: {sorted_dict}")
 
     # log.info(entity_dfs['linkedin.com'])
     # log.info(entity_dfs['vega.github.io'])
@@ -537,7 +537,8 @@ def analyse_top_x_snapshots(entity_type, date_axis_lim):
     # series (ename is for example 'linkedin.com' if this is a top_referrers
     # analysis).
     individual_series = [
-        pd.Series(entity_dfs[ename]["views_unique"], name=ename) for ename in top_n_enames
+        pd.Series(entity_dfs[ename]["views_unique"], name=ename)
+        for ename in top_n_enames
     ]
 
     # The individual series have overlapping or non-overlapping indices.
@@ -604,7 +605,7 @@ def analyse_top_x_snapshots(entity_type, date_axis_lim):
                 scale=alt.Scale(
                     domain=(0, df_melted["views_unique_norm"].max() * 1.1),
                     zero=True,
-                    type=y_axis_scale_type
+                    type=y_axis_scale_type,
                 ),
             ),
             color=alt.Color(
@@ -613,19 +614,21 @@ def analyse_top_x_snapshots(entity_type, date_axis_lim):
                 sort=alt.SortField("order"),
                 # https://vega.github.io/vega-lite/docs/legend.html#legend-properties
                 legend={
-                    #"orient": "bottom",
+                    # "orient": "bottom",
                     "orient": "top",
                     "direction": "vertical",
                     # "legendX": 120,
                     # "legendY": 340,
-                    "title": "Legend:"
+                    "title": "Legend:",
                 },
             ),
             tooltip=[
                 entity_type,
-                alt.Tooltip("views_unique_norm:Q", format='.2f', title="views (14d mean)"),
-                alt.Tooltip("time:T", format='%B %e, %Y', title="date")
-            ]
+                alt.Tooltip(
+                    "views_unique_norm:Q", format=".2f", title="views (14d mean)"
+                ),
+                alt.Tooltip("time:T", format="%B %e, %Y", title="date"),
+            ],
         )
         .configure_point(size=30)
         .properties(**panel_props)
@@ -780,7 +783,9 @@ def analyse_view_clones_ts_fragments():
             )
 
     if len(snapshot_dfs) == 0 and df_prev_agg is None:
-        log.info("leave early: no data for views/clones: no snapshots, no previous aggregate")
+        log.info(
+            "leave early: no data for views/clones: no snapshots, no previous aggregate"
+        )
         return
 
     log.info("build aggregate, drop duplicate data")
@@ -820,8 +825,8 @@ def analyse_view_clones_ts_fragments():
     # plot x_limit in all views/clones plot, but also in other plots in the
     # report (views/clones is likely the most complete data -- i.e. the  widest
     # time window).
-    date_axis_lim = gen_date_axis_lim((dfall, ))
-    log.info('time range of views/clones data: %s', date_axis_lim)
+    date_axis_lim = gen_date_axis_lim((dfall,))
+    log.info("time range of views/clones data: %s", date_axis_lim)
 
     log.info("shape of dataframe before dropping duplicates: %s", dfall.shape)
     # print(dfall)
@@ -932,13 +937,13 @@ def analyse_view_clones_ts_fragments():
                     scale=alt.Scale(
                         domain=(0, df_agg_clones["clones_unique"].max() * 1.1),
                         zero=True,
-                        type=yaxistype
+                        type=yaxistype,
                     ),
                 ),
                 tooltip=[
-                    alt.Tooltip("clones_unique:Q", format='.1f', title="clones (u)"),
-                    alt.Tooltip("time:T", format='%B %e, %Y', title="date")
-                ]
+                    alt.Tooltip("clones_unique:Q", format=".1f", title="clones (u)"),
+                    alt.Tooltip("time:T", format="%B %e, %Y", title="date"),
+                ],
             )
         )
         .configure_axisY(labelBound=True)
@@ -964,13 +969,13 @@ def analyse_view_clones_ts_fragments():
                     scale=alt.Scale(
                         domain=(0, df_agg_clones["clones_total"].max() * 1.1),
                         zero=True,
-                        type=yaxistype
+                        type=yaxistype,
                     ),
                 ),
                 tooltip=[
-                    alt.Tooltip("clones_total:Q", format='.1f', title="clones (t)"),
-                    alt.Tooltip("time:T", format='%B %e, %Y', title="date")
-                ]
+                    alt.Tooltip("clones_total:Q", format=".1f", title="clones (t)"),
+                    alt.Tooltip("time:T", format="%B %e, %Y", title="date"),
+                ],
             )
         )
         .configure_axisY(labelBound=True)
@@ -996,13 +1001,13 @@ def analyse_view_clones_ts_fragments():
                     scale=alt.Scale(
                         domain=(0, df_agg_views["views_unique"].max() * 1.1),
                         zero=True,
-                        type=yaxistype
+                        type=yaxistype,
                     ),
                 ),
                 tooltip=[
-                    alt.Tooltip("views_unique:Q", format='.1f', title="views (u)"),
-                    alt.Tooltip("time:T", format='%B %e, %Y', title="date")
-                ]
+                    alt.Tooltip("views_unique:Q", format=".1f", title="views (u)"),
+                    alt.Tooltip("time:T", format="%B %e, %Y", title="date"),
+                ],
             )
         )
         .configure_axisY(labelBound=True)
@@ -1028,13 +1033,13 @@ def analyse_view_clones_ts_fragments():
                     scale=alt.Scale(
                         domain=(0, df_agg_views["views_total"].max() * 1.1),
                         zero=True,
-                        type=yaxistype
+                        type=yaxistype,
                     ),
                 ),
                 tooltip=[
-                    alt.Tooltip("views_total:Q", format='.1f', title="views (t)"),
-                    alt.Tooltip("time:T", format='%B %e, %Y', title="date")
-                ]
+                    alt.Tooltip("views_total:Q", format=".1f", title="views (t)"),
+                    alt.Tooltip("time:T", format="%B %e, %Y", title="date"),
+                ],
             )
         )
         .configure_axisY(labelBound=True)
@@ -1111,9 +1116,9 @@ def add_stargazers_section(df, date_axis_lim):
                 ),
             ),
             tooltip=[
-                alt.Tooltip("stars_cumulative:Q", format='d', title="stars"),
-                alt.Tooltip("time:T", format='%B %e, %Y', title="date")
-            ]
+                alt.Tooltip("stars_cumulative:Q", format="d", title="stars"),
+                alt.Tooltip("time:T", format="%B %e, %Y", title="date"),
+            ],
         )
         .configure_point(size=50)
         .properties(**panel_props)
@@ -1166,9 +1171,9 @@ def add_fork_section(df, date_axis_lim):
                 ),
             ),
             tooltip=[
-                alt.Tooltip("forks_cumulative:Q", format='d', title="forks"),
-                alt.Tooltip("time:T", format='%B %e, %Y', title="date")
-            ]
+                alt.Tooltip("forks_cumulative:Q", format="d", title="forks"),
+                alt.Tooltip("time:T", format="%B %e, %Y", title="date"),
+            ],
         )
         .configure_point(size=50)
         .properties(**panel_props)
@@ -1200,14 +1205,15 @@ def symlog_or_lin(df, colname, threshold):
     # TODO: decide between 'linear' and 'symlog' axis based on the value range
     rmin = df[colname].min()
     rmax = df[colname].max()
-    log.info(f'df[{colname}] min: {rmin}, max: {rmax}')
+    log.info(f"df[{colname}] min: {rmin}, max: {rmax}")
 
     if rmax - rmin > threshold:
-        log.info(f'df[{colname}]: use symlog scale, because range > {threshold}')
+        log.info(f"df[{colname}]: use symlog scale, because range > {threshold}")
         return "symlog"
 
-    log.info(f'df[{colname}]: use linear scale')
+    log.info(f"df[{colname}]: use linear scale")
     return "linear"
+
 
 def get_stars_over_time():
     # TODO: for ~10k stars repositories, this operation is too costly for doing

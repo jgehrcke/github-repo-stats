@@ -1079,7 +1079,7 @@ def analyse_view_clones_ts_fragments():
 
     MD_REPORT.write(
         textwrap.dedent(
-            """
+            f"""
 
 
     ## Views

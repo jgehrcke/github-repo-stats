@@ -344,7 +344,7 @@ def _get_snapshot_time_from_path(p, basename_suffix):
     t = pytz.timezone("UTC").localize(
         datetime.strptime(basename_prefix, "%Y-%m-%d_%H%M%S")
     )
-    log.info("parsed timestamp from path: %s", t)
+    log.debug("parsed timestamp from path: %s", t)
     return t
 
 
@@ -353,8 +353,10 @@ def _get_snapshot_dfs(csvpaths, basename_suffix):
     snapshot_dfs = []
     column_names_seen = set()
 
+    log.info(f"about to deserialize {len(csvpaths)} snapshot CSV files")
+
     for p in csvpaths:
-        log.info("attempt to parse %s", p)
+        log.debug("attempt to parse %s", p)
         snapshot_time = _get_snapshot_time_from_path(p, basename_suffix)
         df = pd.read_csv(p)
 
@@ -383,11 +385,11 @@ def _get_snapshot_dfs(csvpaths, basename_suffix):
 def _build_entity_dfs(dfa, entity_type, unique_entity_names):
 
     cmn_ename_prefix = os.path.commonprefix(list(unique_entity_names))
-    log.info("cmn_ename_prefix: %s", cmn_ename_prefix)
+    log.info("_build_entity_dfs. cmn_ename_prefix: %s", cmn_ename_prefix)
+    log.info("dfa:\n%s", dfa)
 
     entity_dfs = {}
     for ename in unique_entity_names:
-        log.info("create dataframe for %s: %s", entity_type, ename)
         # Do a subselection
         edf = dfa[dfa[entity_type] == ename]
         # Now use datetime column as index
@@ -398,6 +400,7 @@ def _build_entity_dfs(dfa, entity_type, unique_entity_names):
         edf = edf.sort_index()
 
         # Do entity name processing
+        log.debug("ename before transformation: %s", ename)
         if entity_type == "path":
             entity_name_transformed = ename[len(cmn_ename_prefix) :]
             # The root path (e.g., `owner/repo`) is now an empty string. That's
@@ -412,8 +415,8 @@ def _build_entity_dfs(dfa, entity_type, unique_entity_names):
         # Make it so that there is at most one data point per day, in case
         # individual snapshots were taken with higher frequency.
         n_hour_bins = 24
-        log.info("len(edf): %s", len(edf))
-        log.info("downsample entity DF into %s-hour bins", n_hour_bins)
+        log.debug("len(edf): %s", len(edf))
+        log.debug("downsample entity DF into %s-hour bins", n_hour_bins)
         # Resample the DF into N-hour bins. Take max() for each group. Do
         # `dropna()` on the resampler to remove all up-sampled data points (in
         # case snapshots were taken at much lower frequency). Default behavior
@@ -421,10 +424,11 @@ def _build_entity_dfs(dfa, entity_type, unique_entity_names):
         # left edge of the bin, and to have the bin be closed on the left edge
         # (right edge of the bin belongs to next bin).
         edf = edf.resample(f"{n_hour_bins}h").max().dropna()
-        log.info("len(edf): %s", len(edf))
+        # log.debug("len(edf): %s", len(edf))
 
         # print(edf)
         entity_dfs[ename] = edf
+        log.info(f"created dataframe for {entity_type}: {ename} -- len: {len(edf)}")
 
     return entity_dfs
 

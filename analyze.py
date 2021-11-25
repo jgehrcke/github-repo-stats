@@ -88,20 +88,38 @@ def main():
 
     gen_report_preamble()
 
-    vc_date_axis_lim = analyse_view_clones_ts_fragments()
+    # The plots in this section share the same time frame showns (time axis
+    # limits): min across all view/clone data, max across all view/clone data.
+    df_vc_agg = analyse_view_clones_ts_fragments()
+
     report_pdf_pagebreak()
 
-    # sf_date_axis_lim = None
-    # if len(df_stargazers) and len(df_forks):
-    #     # Sync up the time window shown in the plots for forks and stars over time.
-    #     sf_date_axis_lim = gen_date_axis_lim((df_stargazers, df_forks))
-    #     log.info("time window for stargazer/fork plots: %s", sf_date_axis_lim)
+    # Sync up the time window shown in the plots for forks and stars over time.
+    # Stargazer and fork time series obtained from github go back in time up to
+    # the first fork/stargazer event -- regardless of when data collection via
+    # this tool was started. That is, the earliest point in time in the fork/sg
+    # time series may be earlier (potentially much earlier -- years!) than the
+    # oldest point in time in the views/clones time series (where the first
+    # data point's time depends on the point in time GHRS was started to be
+    # used). However, the other special case of views/clone data to start
+    # before the first sg/fork event having happened is also possible. That is,
+    # extract min and max timestamps from all available time series data:
+    # views/clones, sg, forks).
+    sf_date_axis_lim = gen_date_axis_lim((df_vc_agg, df_stargazers, df_forks))
+    log.info("time window for stargazer/fork data: %s", sf_date_axis_lim)
+
+    sf_starts_earlier_than_vc_data = (
+        min(df_stargazers.index.values.min(), df_forks.index.values.min())
+        < df_vc_agg.index.values.min()
+    )
 
     if len(df_stargazers):
-        add_stargazers_section(df_stargazers, vc_date_axis_lim)
+        add_stargazers_section(
+            df_stargazers, sf_date_axis_lim, sf_starts_earlier_than_vc_data
+        )
 
     if len(df_forks):
-        add_fork_section(df_forks, vc_date_axis_lim)
+        add_fork_section(df_forks, sf_date_axis_lim, sf_starts_earlier_than_vc_data)
 
     report_pdf_pagebreak()
 
@@ -122,8 +140,9 @@ def main():
         )
     )
 
-    analyse_top_x_snapshots("referrer", vc_date_axis_lim)
-    analyse_top_x_snapshots("path", vc_date_axis_lim)
+    # Use the same x (time) axis limit as for view/clone plots further above.
+    analyse_top_x_snapshots("referrer", gen_date_axis_lim((df_vc_agg,)))
+    analyse_top_x_snapshots("path", gen_date_axis_lim((df_vc_agg,)))
 
     gen_report_footer()
     finalize_and_render_report()
@@ -825,13 +844,6 @@ def analyse_view_clones_ts_fragments():
 
     dfall.sort_index(inplace=True)
 
-    # Get time range, to be returned by this function. Used later for setting
-    # plot x_limit in all views/clones plot, but also in other plots in the
-    # report (views/clones is likely the most complete data -- i.e. the  widest
-    # time window).
-    date_axis_lim = gen_date_axis_lim((dfall,))
-    log.info("time range of views/clones data: %s", date_axis_lim)
-
     log.info("shape of dataframe before dropping duplicates: %s", dfall.shape)
     # print(dfall)
 
@@ -855,8 +867,14 @@ def analyse_view_clones_ts_fragments():
     # Using that method, we effectively ignore said cutoff artifact. In short:
     # group by timestamp (index), take the maximum.
     df_agg = dfall.groupby(dfall.index).max()
-
     log.info("shape of dataframe after dropping duplicates: %s", df_agg.shape)
+
+    # Get time range, to be returned by this function. Used later for setting
+    # plot x_limit in all views/clones plot, but also in other plots in the
+    # report (views/clones is likely the most complete data -- i.e. the  widest
+    # time window).
+    date_axis_lim = gen_date_axis_lim((df_agg,))
+    log.info("time range of views/clones data: %s", date_axis_lim)
 
     # Write aggregate
     # agg_fname = (
@@ -909,6 +927,9 @@ def analyse_view_clones_ts_fragments():
 
     # Why reset_index()? See
     # https://github.com/altair-viz/altair/issues/271#issuecomment-573480284
+    # Use new name for df to be kept around for returning, before reset_index()
+    # so that df.index is kept meaningful.
+    df_agg_for_return = df_agg
     df_agg = df_agg.reset_index()
     df_agg_views = df_agg.drop(columns=["clones_unique", "clones_total"])
     df_agg_clones = df_agg.drop(columns=["views_unique", "views_total"])
@@ -1092,17 +1113,17 @@ def analyse_view_clones_ts_fragments():
         ]
     )
 
-    return date_axis_lim
+    return df_agg_for_return
 
 
-def add_stargazers_section(df, date_axis_lim):
+def add_stargazers_section(df, date_axis_lim, starts_earlier_than_vc_data: bool):
     # date_axis_lim is expected to be of the form ["2019-01-01", "2019-12-31"]
 
     x_kwargs = DATETIME_AXIS_PROPERTIES.copy()
 
     if date_axis_lim is not None:
         log.info("custom time window for stargazer plot: %s", date_axis_lim)
-        x_kwargs["scale"] = alt.Scale(domain=date_axis_lim)
+        # x_kwargs["scale"] = alt.Scale(domain=date_axis_lim)
 
     panel_props = {"height": 300, "width": "container", "padding": 10}
     chart = (
@@ -1145,12 +1166,20 @@ def add_stargazers_section(df, date_axis_lim):
     """
         )
     )
+
+    if starts_earlier_than_vc_data:
+        MD_REPORT.write(
+            "Note: this plot shows a larger time frame than the "
+            + "the view/clone plots above "
+            + "because the star/fork data contains earlier samples.\n\n"
+        )
+
     JS_FOOTER_LINES.append(
         f"vegaEmbed('#chart_stargazers', {chart_spec}, {VEGA_EMBED_OPTIONS_JSON}).catch(console.error);"
     )
 
 
-def add_fork_section(df, date_axis_lim):
+def add_fork_section(df, date_axis_lim, starts_earlier_than_vc_data: bool):
     # date_axis_lim is expected to be of the form ["2019-01-01", "2019-12-31"])
 
     x_kwargs = DATETIME_AXIS_PROPERTIES.copy()
@@ -1200,6 +1229,14 @@ def add_fork_section(df, date_axis_lim):
     """
         )
     )
+
+    if starts_earlier_than_vc_data:
+        MD_REPORT.write(
+            "Note: this plot shows a larger time frame than the "
+            + "the view/clone plots above "
+            + "because the star/fork data contains earlier samples.\n\n"
+        )
+
     JS_FOOTER_LINES.append(
         f"vegaEmbed('#chart_forks', {chart_spec}, {VEGA_EMBED_OPTIONS_JSON}).catch(console.error);"
     )

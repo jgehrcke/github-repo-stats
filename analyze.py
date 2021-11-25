@@ -972,7 +972,7 @@ def analyse_view_clones_ts_fragments():
             )
         )
         .configure_axisY(labelBound=True)
-        .configure_point(size=40)
+        .configure_point(size=20)
         .properties(**panel_props)
     )
 
@@ -1004,7 +1004,7 @@ def analyse_view_clones_ts_fragments():
             )
         )
         .configure_axisY(labelBound=True)
-        .configure_point(size=40)
+        .configure_point(size=20)
         .properties(**panel_props)
     )
 
@@ -1036,7 +1036,7 @@ def analyse_view_clones_ts_fragments():
             )
         )
         .configure_axisY(labelBound=True)
-        .configure_point(size=40)
+        .configure_point(size=20)
         .properties(**panel_props)
     )
 
@@ -1068,7 +1068,7 @@ def analyse_view_clones_ts_fragments():
             )
         )
         .configure_axisY(labelBound=True)
-        .configure_point(size=40)
+        .configure_point(size=20)
         .properties(**panel_props)
     )
 

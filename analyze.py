@@ -595,7 +595,7 @@ def analyse_top_x_snapshots(entity_type, date_axis_lim):
     # plot that this is a _mean_ value derived from the _last 14 days_.
     df_melted["views_unique_norm"] = df_melted["views_unique"] / 14.0
 
-    y_axis_scale_type = symlog_or_lin(df_melted, "views_unique_norm", 5)
+    y_axis_scale_type = symlog_or_lin(df_melted, "views_unique_norm", 8)
 
     x_kwargs = DATETIME_AXIS_PROPERTIES.copy()
     if date_axis_lim is not None:
@@ -945,7 +945,7 @@ def analyse_view_clones_ts_fragments():
     x_kwargs["scale"] = alt.Scale(domain=date_axis_lim)
 
     yaxis = alt.Axis()
-    yaxistype = symlog_or_lin(df_agg_clones, "clones_unique", 30)
+    yaxistype = symlog_or_lin(df_agg_clones, "clones_unique", 100)
     if yaxistype == "symlog":
         yaxis = alt.Axis(values=[1, 10, 50, 100, 500, 1000, 5000, 10000])
     chart_clones_unique = (
@@ -977,7 +977,7 @@ def analyse_view_clones_ts_fragments():
     )
 
     yaxis = alt.Axis()
-    yaxistype = symlog_or_lin(df_agg_clones, "clones_total", 30)
+    yaxistype = symlog_or_lin(df_agg_clones, "clones_total", 100)
     if yaxistype == "symlog":
         yaxis = alt.Axis(values=[1, 10, 50, 100, 500, 1000, 5000, 10000])
     chart_clones_total = (
@@ -1009,7 +1009,7 @@ def analyse_view_clones_ts_fragments():
     )
 
     yaxis = alt.Axis()
-    yaxistype = symlog_or_lin(df_agg_views, "views_unique", 30)
+    yaxistype = symlog_or_lin(df_agg_views, "views_unique", 100)
     if yaxistype == "symlog":
         yaxis = alt.Axis(values=[1, 10, 50, 100, 500, 1000, 5000, 10000])
     chart_views_unique = (
@@ -1041,7 +1041,7 @@ def analyse_view_clones_ts_fragments():
     )
 
     yaxis = alt.Axis()
-    yaxistype = symlog_or_lin(df_agg_views, "views_total", 30)
+    yaxistype = symlog_or_lin(df_agg_views, "views_total", 100)
     if yaxistype == "symlog":
         yaxis = alt.Axis(values=[1, 10, 50, 100, 500, 1000, 5000, 10000])
     chart_views_total = (

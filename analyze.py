@@ -24,6 +24,7 @@ import shutil
 import sys
 import tempfile
 
+from typing import List, Set
 from datetime import datetime
 from io import StringIO
 
@@ -59,7 +60,7 @@ ARGS = None
 # Individual code sections are supposed to add to this in-memory Markdown
 # document as they desire.
 MD_REPORT = StringIO()
-JS_FOOTER_LINES = []
+JS_FOOTER_LINES: List[str] = []
 
 # https://github.com/vega/vega-embed#options -- use SVG renderer so that PDF
 # export (print) from browser view yields arbitrarily scalable (vector)
@@ -697,7 +698,7 @@ def analyse_top_x_snapshots(entity_type, date_axis_lim):
     )
 
 
-def analyse_view_clones_ts_fragments():
+def analyse_view_clones_ts_fragments() -> pd.DataFrame:
 
     log.info("read views/clones time series fragments (CSV docs)")
 
@@ -705,7 +706,7 @@ def analyse_view_clones_ts_fragments():
     csvpaths = _glob_csvpaths(basename_suffix)
 
     snapshot_dfs = []
-    column_names_seen = set()
+    column_names_seen: Set[str] = set()
 
     for p in csvpaths:
         log.info("attempt to parse %s", p)
@@ -1263,7 +1264,7 @@ def symlog_or_lin(df, colname, threshold):
     return "linear"
 
 
-def get_stars_over_time():
+def get_stars_over_time() -> pd.DataFrame:
     # TODO: for ~10k stars repositories, this operation is too costly for doing
     # it as part of each analyzer invocation. Move this to the fetcher, and
     # persist the data.
@@ -1350,7 +1351,7 @@ def get_stars_over_time():
     return df
 
 
-def get_forks_over_time():
+def get_forks_over_time() -> pd.DataFrame:
     # TODO: for ~10k forks repositories, this operation is too costly for doing
     # it as part of each analyzer invocation. Move this to the fetcher, and
     # persist the data.

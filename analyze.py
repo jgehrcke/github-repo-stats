@@ -1087,19 +1087,26 @@ def analyse_view_clones_ts_fragments():
     #### Unique visitors
     <div id="chart_views_unique" class="full-width-chart"></div>
 
+    Cumulative: {df_agg_views["views_unique"].sum()}
+
     #### Total views
     <div id="chart_views_total" class="full-width-chart"></div>
 
-    <div class="pagebreak-for-print"> </div>
+    Cumulative: {df_agg_views["views_total"].sum()}
 
+    <div class="pagebreak-for-print"> </div>
 
     ## Clones
 
     #### Unique cloners
     <div id="chart_clones_unique" class="full-width-chart"></div>
 
+    Cumulative: {df_agg_clones["clones_unique"].sum()}
+
     #### Total clones
     <div id="chart_clones_total" class="full-width-chart"></div>
+
+    Cumulative: {df_agg_clones["clones_total"].sum()}
 
     """
         )

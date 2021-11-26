@@ -24,15 +24,14 @@ import shutil
 import sys
 import tempfile
 
-from typing import List, Set
+from typing import List, Set, Any, Optional
 from datetime import datetime
 from io import StringIO
 
 import pandas as pd
-from github import Github
+from github import Github  # type: ignore
 import pytz
-
-import altair as alt
+import altair as alt  # type: ignore
 
 
 """
@@ -53,9 +52,11 @@ logging.basicConfig(
 
 NOW = datetime.utcnow()
 TODAY = NOW.strftime("%Y-%m-%d")
-OUTDIR = None
-ARGS = None
+OUTDIR: Optional[str] = None
 
+# https://stackoverflow.com/a/68855129/145400
+# ARGS: Optional[argparse.Namespace] = None
+ARGS: Any = None
 
 # Individual code sections are supposed to add to this in-memory Markdown
 # document as they desire.
@@ -810,7 +811,8 @@ def analyse_view_clones_ts_fragments() -> pd.DataFrame:
         log.info(
             "leave early: no data for views/clones: no snapshots, no previous aggregate"
         )
-        return
+        # Return empty dataframe to keep logic in main() simple
+        return pd.DataFrame()
 
     log.info("build aggregate, drop duplicate data")
     # Each dataframe in `snapshot_dfs` corresponds to one time series fragment
@@ -841,6 +843,7 @@ def analyse_view_clones_ts_fragments() -> pd.DataFrame:
             dfall = pd.concat([df_allsnapshots, df_prev_agg])
 
     else:
+        assert df_prev_agg is not None
         dfall = df_prev_agg
 
     dfall.sort_index(inplace=True)

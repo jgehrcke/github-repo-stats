@@ -1,4 +1,4 @@
-FROM jgehrcke/github-repo-stats-base:2c3e6756a
+FROM jgehrcke/github-repo-stats-base:3e25f6653
 
 COPY fetch.py /fetch.py
 COPY analyze.py /analyze.py

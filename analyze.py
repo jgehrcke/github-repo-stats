@@ -29,10 +29,9 @@ from datetime import datetime
 from io import StringIO
 
 import pandas as pd
-from github import Github
+from github import Github  # type: ignore
 import pytz
-
-import altair as alt
+import altair as alt  # type: ignore
 
 
 """

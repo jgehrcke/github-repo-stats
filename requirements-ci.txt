@@ -1,0 +1,6 @@
+types-pytz
+pandas-stubs
+mypy
+flake8
+black
+

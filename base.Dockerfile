@@ -9,5 +9,5 @@ RUN echo "deb [arch=amd64]  http://dl.google.com/linux/chrome/deb/ stable main" 
 RUN apt-get -y update
 RUN apt-get -y install google-chrome-stable
 
-RUN pip install pandas==1.3.2 PyGitHub==1.54.1 pytz retrying \
-    selenium==3.141.0 webdriver_manager carbonplan[styles] altair==4.1.0
+RUN pip install pandas==1.3.4 PyGitHub==1.55 pytz retrying \
+    selenium==3.141.0 webdriver_manager carbonplan[styles] altair==4.2.0rc1

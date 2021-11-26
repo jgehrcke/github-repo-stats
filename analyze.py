@@ -24,6 +24,7 @@ import shutil
 import sys
 import tempfile
 
+from typing import List, Set
 from datetime import datetime
 from io import StringIO
 
@@ -59,7 +60,7 @@ ARGS = None
 # Individual code sections are supposed to add to this in-memory Markdown
 # document as they desire.
 MD_REPORT = StringIO()
-JS_FOOTER_LINES = []
+JS_FOOTER_LINES: List[str] = []
 
 # https://github.com/vega/vega-embed#options -- use SVG renderer so that PDF
 # export (print) from browser view yields arbitrarily scalable (vector)
@@ -88,20 +89,38 @@ def main():
 
     gen_report_preamble()
 
-    vc_date_axis_lim = analyse_view_clones_ts_fragments()
+    # The plots in this section share the same time frame showns (time axis
+    # limits): min across all view/clone data, max across all view/clone data.
+    df_vc_agg = analyse_view_clones_ts_fragments()
+
     report_pdf_pagebreak()
 
-    # sf_date_axis_lim = None
-    # if len(df_stargazers) and len(df_forks):
-    #     # Sync up the time window shown in the plots for forks and stars over time.
-    #     sf_date_axis_lim = gen_date_axis_lim((df_stargazers, df_forks))
-    #     log.info("time window for stargazer/fork plots: %s", sf_date_axis_lim)
+    # Sync up the time window shown in the plots for forks and stars over time.
+    # Stargazer and fork time series obtained from github go back in time up to
+    # the first fork/stargazer event -- regardless of when data collection via
+    # this tool was started. That is, the earliest point in time in the fork/sg
+    # time series may be earlier (potentially much earlier -- years!) than the
+    # oldest point in time in the views/clones time series (where the first
+    # data point's time depends on the point in time GHRS was started to be
+    # used). However, the other special case of views/clone data to start
+    # before the first sg/fork event having happened is also possible. That is,
+    # extract min and max timestamps from all available time series data:
+    # views/clones, sg, forks).
+    sf_date_axis_lim = gen_date_axis_lim((df_vc_agg, df_stargazers, df_forks))
+    log.info("time window for stargazer/fork data: %s", sf_date_axis_lim)
+
+    sf_starts_earlier_than_vc_data = (
+        min(df_stargazers.index.values.min(), df_forks.index.values.min())
+        < df_vc_agg.index.values.min()
+    )
 
     if len(df_stargazers):
-        add_stargazers_section(df_stargazers, vc_date_axis_lim)
+        add_stargazers_section(
+            df_stargazers, sf_date_axis_lim, sf_starts_earlier_than_vc_data
+        )
 
     if len(df_forks):
-        add_fork_section(df_forks, vc_date_axis_lim)
+        add_fork_section(df_forks, sf_date_axis_lim, sf_starts_earlier_than_vc_data)
 
     report_pdf_pagebreak()
 
@@ -122,8 +141,9 @@ def main():
         )
     )
 
-    analyse_top_x_snapshots("referrer", vc_date_axis_lim)
-    analyse_top_x_snapshots("path", vc_date_axis_lim)
+    # Use the same x (time) axis limit as for view/clone plots further above.
+    analyse_top_x_snapshots("referrer", gen_date_axis_lim((df_vc_agg,)))
+    analyse_top_x_snapshots("path", gen_date_axis_lim((df_vc_agg,)))
 
     gen_report_footer()
     finalize_and_render_report()
@@ -344,7 +364,7 @@ def _get_snapshot_time_from_path(p, basename_suffix):
     t = pytz.timezone("UTC").localize(
         datetime.strptime(basename_prefix, "%Y-%m-%d_%H%M%S")
     )
-    log.info("parsed timestamp from path: %s", t)
+    log.debug("parsed timestamp from path: %s", t)
     return t
 
 
@@ -353,8 +373,10 @@ def _get_snapshot_dfs(csvpaths, basename_suffix):
     snapshot_dfs = []
     column_names_seen = set()
 
+    log.info(f"about to deserialize {len(csvpaths)} snapshot CSV files")
+
     for p in csvpaths:
-        log.info("attempt to parse %s", p)
+        log.debug("attempt to parse %s", p)
         snapshot_time = _get_snapshot_time_from_path(p, basename_suffix)
         df = pd.read_csv(p)
 
@@ -383,11 +405,11 @@ def _get_snapshot_dfs(csvpaths, basename_suffix):
 def _build_entity_dfs(dfa, entity_type, unique_entity_names):
 
     cmn_ename_prefix = os.path.commonprefix(list(unique_entity_names))
-    log.info("cmn_ename_prefix: %s", cmn_ename_prefix)
+    log.info("_build_entity_dfs. cmn_ename_prefix: %s", cmn_ename_prefix)
+    log.info("dfa:\n%s", dfa)
 
     entity_dfs = {}
     for ename in unique_entity_names:
-        log.info("create dataframe for %s: %s", entity_type, ename)
         # Do a subselection
         edf = dfa[dfa[entity_type] == ename]
         # Now use datetime column as index
@@ -398,6 +420,7 @@ def _build_entity_dfs(dfa, entity_type, unique_entity_names):
         edf = edf.sort_index()
 
         # Do entity name processing
+        log.debug("ename before transformation: %s", ename)
         if entity_type == "path":
             entity_name_transformed = ename[len(cmn_ename_prefix) :]
             # The root path (e.g., `owner/repo`) is now an empty string. That's
@@ -412,8 +435,8 @@ def _build_entity_dfs(dfa, entity_type, unique_entity_names):
         # Make it so that there is at most one data point per day, in case
         # individual snapshots were taken with higher frequency.
         n_hour_bins = 24
-        log.info("len(edf): %s", len(edf))
-        log.info("downsample entity DF into %s-hour bins", n_hour_bins)
+        log.debug("len(edf): %s", len(edf))
+        log.debug("downsample entity DF into %s-hour bins", n_hour_bins)
         # Resample the DF into N-hour bins. Take max() for each group. Do
         # `dropna()` on the resampler to remove all up-sampled data points (in
         # case snapshots were taken at much lower frequency). Default behavior
@@ -421,10 +444,11 @@ def _build_entity_dfs(dfa, entity_type, unique_entity_names):
         # left edge of the bin, and to have the bin be closed on the left edge
         # (right edge of the bin belongs to next bin).
         edf = edf.resample(f"{n_hour_bins}h").max().dropna()
-        log.info("len(edf): %s", len(edf))
+        # log.debug("len(edf): %s", len(edf))
 
         # print(edf)
         entity_dfs[ename] = edf
+        log.info(f"created dataframe for {entity_type}: {ename} -- len: {len(edf)}")
 
     return entity_dfs
 
@@ -572,7 +596,7 @@ def analyse_top_x_snapshots(entity_type, date_axis_lim):
     # plot that this is a _mean_ value derived from the _last 14 days_.
     df_melted["views_unique_norm"] = df_melted["views_unique"] / 14.0
 
-    y_axis_scale_type = symlog_or_lin(df_melted, "views_unique_norm", 5)
+    y_axis_scale_type = symlog_or_lin(df_melted, "views_unique_norm", 8)
 
     x_kwargs = DATETIME_AXIS_PROPERTIES.copy()
     if date_axis_lim is not None:
@@ -674,7 +698,7 @@ def analyse_top_x_snapshots(entity_type, date_axis_lim):
     )
 
 
-def analyse_view_clones_ts_fragments():
+def analyse_view_clones_ts_fragments() -> pd.DataFrame:
 
     log.info("read views/clones time series fragments (CSV docs)")
 
@@ -682,7 +706,7 @@ def analyse_view_clones_ts_fragments():
     csvpaths = _glob_csvpaths(basename_suffix)
 
     snapshot_dfs = []
-    column_names_seen = set()
+    column_names_seen: Set[str] = set()
 
     for p in csvpaths:
         log.info("attempt to parse %s", p)
@@ -821,13 +845,6 @@ def analyse_view_clones_ts_fragments():
 
     dfall.sort_index(inplace=True)
 
-    # Get time range, to be returned by this function. Used later for setting
-    # plot x_limit in all views/clones plot, but also in other plots in the
-    # report (views/clones is likely the most complete data -- i.e. the  widest
-    # time window).
-    date_axis_lim = gen_date_axis_lim((dfall,))
-    log.info("time range of views/clones data: %s", date_axis_lim)
-
     log.info("shape of dataframe before dropping duplicates: %s", dfall.shape)
     # print(dfall)
 
@@ -851,8 +868,14 @@ def analyse_view_clones_ts_fragments():
     # Using that method, we effectively ignore said cutoff artifact. In short:
     # group by timestamp (index), take the maximum.
     df_agg = dfall.groupby(dfall.index).max()
-
     log.info("shape of dataframe after dropping duplicates: %s", df_agg.shape)
+
+    # Get time range, to be returned by this function. Used later for setting
+    # plot x_limit in all views/clones plot, but also in other plots in the
+    # report (views/clones is likely the most complete data -- i.e. the  widest
+    # time window).
+    date_axis_lim = gen_date_axis_lim((df_agg,))
+    log.info("time range of views/clones data: %s", date_axis_lim)
 
     # Write aggregate
     # agg_fname = (
@@ -905,6 +928,9 @@ def analyse_view_clones_ts_fragments():
 
     # Why reset_index()? See
     # https://github.com/altair-viz/altair/issues/271#issuecomment-573480284
+    # Use new name for df to be kept around for returning, before reset_index()
+    # so that df.index is kept meaningful.
+    df_agg_for_return = df_agg
     df_agg = df_agg.reset_index()
     df_agg_views = df_agg.drop(columns=["clones_unique", "clones_total"])
     df_agg_clones = df_agg.drop(columns=["views_unique", "views_total"])
@@ -920,7 +946,7 @@ def analyse_view_clones_ts_fragments():
     x_kwargs["scale"] = alt.Scale(domain=date_axis_lim)
 
     yaxis = alt.Axis()
-    yaxistype = symlog_or_lin(df_agg_clones, "clones_unique", 30)
+    yaxistype = symlog_or_lin(df_agg_clones, "clones_unique", 100)
     if yaxistype == "symlog":
         yaxis = alt.Axis(values=[1, 10, 50, 100, 500, 1000, 5000, 10000])
     chart_clones_unique = (
@@ -947,12 +973,12 @@ def analyse_view_clones_ts_fragments():
             )
         )
         .configure_axisY(labelBound=True)
-        .configure_point(size=40)
+        .configure_point(size=20)
         .properties(**panel_props)
     )
 
     yaxis = alt.Axis()
-    yaxistype = symlog_or_lin(df_agg_clones, "clones_total", 30)
+    yaxistype = symlog_or_lin(df_agg_clones, "clones_total", 100)
     if yaxistype == "symlog":
         yaxis = alt.Axis(values=[1, 10, 50, 100, 500, 1000, 5000, 10000])
     chart_clones_total = (
@@ -979,12 +1005,12 @@ def analyse_view_clones_ts_fragments():
             )
         )
         .configure_axisY(labelBound=True)
-        .configure_point(size=40)
+        .configure_point(size=20)
         .properties(**panel_props)
     )
 
     yaxis = alt.Axis()
-    yaxistype = symlog_or_lin(df_agg_views, "views_unique", 30)
+    yaxistype = symlog_or_lin(df_agg_views, "views_unique", 100)
     if yaxistype == "symlog":
         yaxis = alt.Axis(values=[1, 10, 50, 100, 500, 1000, 5000, 10000])
     chart_views_unique = (
@@ -1011,12 +1037,12 @@ def analyse_view_clones_ts_fragments():
             )
         )
         .configure_axisY(labelBound=True)
-        .configure_point(size=40)
+        .configure_point(size=20)
         .properties(**panel_props)
     )
 
     yaxis = alt.Axis()
-    yaxistype = symlog_or_lin(df_agg_views, "views_total", 30)
+    yaxistype = symlog_or_lin(df_agg_views, "views_total", 100)
     if yaxistype == "symlog":
         yaxis = alt.Axis(values=[1, 10, 50, 100, 500, 1000, 5000, 10000])
     chart_views_total = (
@@ -1043,7 +1069,7 @@ def analyse_view_clones_ts_fragments():
             )
         )
         .configure_axisY(labelBound=True)
-        .configure_point(size=40)
+        .configure_point(size=20)
         .properties(**panel_props)
     )
 
@@ -1054,7 +1080,7 @@ def analyse_view_clones_ts_fragments():
 
     MD_REPORT.write(
         textwrap.dedent(
-            """
+            f"""
 
 
     ## Views
@@ -1062,19 +1088,26 @@ def analyse_view_clones_ts_fragments():
     #### Unique visitors
     <div id="chart_views_unique" class="full-width-chart"></div>
 
+    Cumulative: {df_agg_views["views_unique"].sum()}
+
     #### Total views
     <div id="chart_views_total" class="full-width-chart"></div>
 
-    <div class="pagebreak-for-print"> </div>
+    Cumulative: {df_agg_views["views_total"].sum()}
 
+    <div class="pagebreak-for-print"> </div>
 
     ## Clones
 
     #### Unique cloners
     <div id="chart_clones_unique" class="full-width-chart"></div>
 
+    Cumulative: {df_agg_clones["clones_unique"].sum()}
+
     #### Total clones
     <div id="chart_clones_total" class="full-width-chart"></div>
+
+    Cumulative: {df_agg_clones["clones_total"].sum()}
 
     """
         )
@@ -1088,17 +1121,17 @@ def analyse_view_clones_ts_fragments():
         ]
     )
 
-    return date_axis_lim
+    return df_agg_for_return
 
 
-def add_stargazers_section(df, date_axis_lim):
+def add_stargazers_section(df, date_axis_lim, starts_earlier_than_vc_data: bool):
     # date_axis_lim is expected to be of the form ["2019-01-01", "2019-12-31"]
 
     x_kwargs = DATETIME_AXIS_PROPERTIES.copy()
 
     if date_axis_lim is not None:
         log.info("custom time window for stargazer plot: %s", date_axis_lim)
-        x_kwargs["scale"] = alt.Scale(domain=date_axis_lim)
+        # x_kwargs["scale"] = alt.Scale(domain=date_axis_lim)
 
     panel_props = {"height": 300, "width": "container", "padding": 10}
     chart = (
@@ -1141,12 +1174,20 @@ def add_stargazers_section(df, date_axis_lim):
     """
         )
     )
+
+    if starts_earlier_than_vc_data:
+        MD_REPORT.write(
+            "Note: this plot shows a larger time frame than the "
+            + "the view/clone plots above "
+            + "because the star/fork data contains earlier samples.\n\n"
+        )
+
     JS_FOOTER_LINES.append(
         f"vegaEmbed('#chart_stargazers', {chart_spec}, {VEGA_EMBED_OPTIONS_JSON}).catch(console.error);"
     )
 
 
-def add_fork_section(df, date_axis_lim):
+def add_fork_section(df, date_axis_lim, starts_earlier_than_vc_data: bool):
     # date_axis_lim is expected to be of the form ["2019-01-01", "2019-12-31"])
 
     x_kwargs = DATETIME_AXIS_PROPERTIES.copy()
@@ -1196,6 +1237,14 @@ def add_fork_section(df, date_axis_lim):
     """
         )
     )
+
+    if starts_earlier_than_vc_data:
+        MD_REPORT.write(
+            "Note: this plot shows a larger time frame than the "
+            + "the view/clone plots above "
+            + "because the star/fork data contains earlier samples.\n\n"
+        )
+
     JS_FOOTER_LINES.append(
         f"vegaEmbed('#chart_forks', {chart_spec}, {VEGA_EMBED_OPTIONS_JSON}).catch(console.error);"
     )
@@ -1215,7 +1264,7 @@ def symlog_or_lin(df, colname, threshold):
     return "linear"
 
 
-def get_stars_over_time():
+def get_stars_over_time() -> pd.DataFrame:
     # TODO: for ~10k stars repositories, this operation is too costly for doing
     # it as part of each analyzer invocation. Move this to the fetcher, and
     # persist the data.
@@ -1302,7 +1351,7 @@ def get_stars_over_time():
     return df
 
 
-def get_forks_over_time():
+def get_forks_over_time() -> pd.DataFrame:
     # TODO: for ~10k forks repositories, this operation is too costly for doing
     # it as part of each analyzer invocation. Move this to the fetcher, and
     # persist the data.

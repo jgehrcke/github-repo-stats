@@ -107,21 +107,24 @@ def main():
     # before the first sg/fork event having happened is also possible. That is,
     # extract min and max timestamps from all available time series data:
     # views/clones, sg, forks).
-    sf_date_axis_lim = gen_date_axis_lim(filter(lambda df: len(df.index.values) > 0, (df_vc_agg, df_stargazers, df_forks)))
-    log.info("time window for stargazer/fork data: %s", sf_date_axis_lim)
+    if len(df_stargazers) or len(df_stargazers):
+        sf_date_axis_lim = gen_date_axis_lim(filter(lambda df: len(df), (df_vc_agg, df_stargazers, df_forks)))
+        log.info("time window for stargazer/fork data: %s", sf_date_axis_lim)
 
-    sf_starts_earlier_than_vc_data = (
-        min(df_stargazers.index.values.min(), df_forks.index.values.min())
-        < df_vc_agg.index.values.min()
-    )
-
-    if len(df_stargazers):
-        add_stargazers_section(
-            df_stargazers, sf_date_axis_lim, sf_starts_earlier_than_vc_data
+        sf_starts_earlier_than_vc_data = (
+            min(df_stargazers.index.values.min(), df_forks.index.values.min())
+            < df_vc_agg.index.values.min()
         )
 
-    if len(df_forks):
-        add_fork_section(df_forks, sf_date_axis_lim, sf_starts_earlier_than_vc_data)
+        if len(df_stargazers):
+            add_stargazers_section(
+                df_stargazers, sf_date_axis_lim, sf_starts_earlier_than_vc_data
+            )
+
+        if len(df_forks):
+            add_fork_section(
+                df_forks, sf_date_axis_lim, sf_starts_earlier_than_vc_data
+            )
 
     report_pdf_pagebreak()
 

@@ -113,7 +113,7 @@ def main():
             dfs.append(df_stargazers)
         if len(df_forks):
             dfs.append(df_forks)
-        sf_date_axis_lim = gen_date_axis_lim(dfs)
+        sf_date_axis_lim = gen_date_axis_lim(tuple(dfs))
         log.info("time window for stargazer/fork data: %s", sf_date_axis_lim)
 
         sf_starts_earlier_than_vc_data = (

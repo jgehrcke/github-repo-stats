@@ -107,12 +107,13 @@ def main():
     # before the first sg/fork event having happened is also possible. That is,
     # extract min and max timestamps from all available time series data:
     # views/clones, sg, forks).
-    if len(df_stargazers) or len(df_forks):
+    if len(df_stargazers.index.values) or len(df_forks.index.values):
         dfs = list(df_vc_agg)
-        if len(df_stargazers):
+        if len(df_stargazers.index.values):
             dfs.append(df_stargazers)
-        if len(df_forks):
+        if len(df_forks.index.values):
             dfs.append(df_forks)
+        log.info("datagrames for stargazer/fork time window: %s", dfs)
         sf_date_axis_lim = gen_date_axis_lim(tuple(dfs))
         log.info("time window for stargazer/fork data: %s", sf_date_axis_lim)
 

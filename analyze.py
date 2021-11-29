@@ -113,7 +113,6 @@ def main():
             dfs = dfs + (df_stargazers,)
         if len(df_forks.index.values):
             dfs = dfs + (df_forks,)
-        log.info("dataframes for stargazer/fork time window: %s", dfs)
         sf_date_axis_lim = gen_date_axis_lim(dfs)
         log.info("time window for stargazer/fork data: %s", sf_date_axis_lim)
 

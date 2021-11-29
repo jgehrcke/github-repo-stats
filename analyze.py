@@ -24,7 +24,7 @@ import shutil
 import sys
 import tempfile
 
-from typing import List, Set, Any, Optional
+from typing import List, Set, Any, Optional, Tuple
 from datetime import datetime
 from io import StringIO
 
@@ -150,7 +150,7 @@ def main():
     finalize_and_render_report()
 
 
-def gen_date_axis_lim(dfs):
+def gen_date_axis_lim(dfs) -> Tuple[str, str]:
     # Find minimal first timestamp across dataframes, and maximal last
     # timestamp. Return in string representation, example:
     # ['2020-03-18', '2021-01-03']

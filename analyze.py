@@ -120,16 +120,10 @@ def main():
         sf_starts_earlier_than_vc_data = False
 
         if len(df_stargazers) and len(df_stargazers.index.values):
-            sf_starts_earlier_than_vc_data = (
-                    min(df_stargazers.index.values.min())
-                    < df_vc_agg.index.values.min()
-            )
+            sf_starts_earlier_than_vc_data = (df_stargazers.index.values.min() < df_vc_agg.index.values.min())
 
         if not sf_starts_earlier_than_vc_data and len(df_forks) and len(df_forks.index.values):
-            sf_starts_earlier_than_vc_data = (
-                    min(df_forks.index.values.min())
-                    < df_vc_agg.index.values.min()
-            )
+            sf_starts_earlier_than_vc_data = (df_forks.index.values.min() < df_vc_agg.index.values.min())
 
         if len(df_stargazers):
             add_stargazers_section(

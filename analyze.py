@@ -1181,7 +1181,7 @@ def add_stargazers_section(df, date_axis_lim, starts_earlier_than_vc_data: bool)
     if starts_earlier_than_vc_data:
         MD_REPORT.write(
             "Note: this plot shows a larger time frame than the "
-            + "the view/clone plots above "
+            + "view/clone plots above "
             + "because the star/fork data contains earlier samples.\n\n"
         )
 
@@ -1244,7 +1244,7 @@ def add_fork_section(df, date_axis_lim, starts_earlier_than_vc_data: bool):
     if starts_earlier_than_vc_data:
         MD_REPORT.write(
             "Note: this plot shows a larger time frame than the "
-            + "the view/clone plots above "
+            + "view/clone plots above "
             + "because the star/fork data contains earlier samples.\n\n"
         )
 

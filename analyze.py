@@ -24,7 +24,7 @@ import shutil
 import sys
 import tempfile
 
-from typing import List, Set, Any, Optional
+from typing import Iterable, Set, Any, Optional, Tuple
 from datetime import datetime
 from io import StringIO
 
@@ -61,7 +61,7 @@ ARGS: Any = None
 # Individual code sections are supposed to add to this in-memory Markdown
 # document as they desire.
 MD_REPORT = StringIO()
-JS_FOOTER_LINES: List[str] = []
+JS_FOOTER_LINES: list[str] = []
 
 # https://github.com/vega/vega-embed#options -- use SVG renderer so that PDF
 # export (print) from browser view yields arbitrarily scalable (vector)
@@ -78,7 +78,7 @@ DATETIME_AXIS_PROPERTIES = {
 }
 
 
-def main():
+def main() -> None:
     if not os.environ.get("GHRS_GITHUB_API_TOKEN", None):
         sys.exit("error: environment variable GHRS_GITHUB_API_TOKEN empty or not set")
 
@@ -110,18 +110,28 @@ def main():
     sf_date_axis_lim = gen_date_axis_lim((df_vc_agg, df_stargazers, df_forks))
     log.info("time window for stargazer/fork data: %s", sf_date_axis_lim)
 
-    sf_starts_earlier_than_vc_data = (
-        min(df_stargazers.index.values.min(), df_forks.index.values.min())
-        < df_vc_agg.index.values.min()
-    )
-
-    if len(df_stargazers):
-        add_stargazers_section(
-            df_stargazers, sf_date_axis_lim, sf_starts_earlier_than_vc_data
+    # If either of these two time series contains at least one data point then
+    # `sf_date_axis_lim` is meaningful. Calculate non-None
+    # `sf_starts_earlier_than_vc_data`.
+    sf_starts_earlier_than_vc_data: None | bool = None
+    if len(df_stargazers) or len(df_forks):
+        # See if stars and/or fork timeseries starts earlier than view/count
+        # time series. Do not crash when one of both data frames is of zero
+        # length. Require sorted index.
+        sf_starts_earlier_than_vc_data = (
+            min(d.index.values[0] for d in [df_stargazers, df_forks] if len(d))
+            < df_vc_agg.index.values[0]
         )
 
-    if len(df_forks):
-        add_fork_section(df_forks, sf_date_axis_lim, sf_starts_earlier_than_vc_data)
+    # df_stargazers and df_forks may both be of zero length, in which case
+    # the values for sf_date_axis_lim and sf_starts_earlier_than_vc_data are
+    # meaningless. The two functions are expected to generate proper content
+    # for
+    add_stargazers_section(
+        df_stargazers, sf_date_axis_lim, sf_starts_earlier_than_vc_data
+    )
+
+    add_fork_section(df_forks, sf_date_axis_lim, sf_starts_earlier_than_vc_data)
 
     report_pdf_pagebreak()
 
@@ -150,14 +160,21 @@ def main():
     finalize_and_render_report()
 
 
-def gen_date_axis_lim(dfs):
+def gen_date_axis_lim(dfs: Iterable[pd.DataFrame]) -> Tuple[str, str]:
     # Find minimal first timestamp across dataframes, and maximal last
     # timestamp. Return in string representation, example:
     # ['2020-03-18', '2021-01-03']
     # Can be used for setting time axis limits in Altair.
+
+    # If there is not at least one non-zero length dataframe in the sequence
+    # then min()/max() will throw a ValueError.
     return (
-        pd.to_datetime(min(df.index.values[0] for df in dfs)).strftime("%Y-%m-%d"),
-        pd.to_datetime(max(df.index.values[-1] for df in dfs)).strftime("%Y-%m-%d"),
+        pd.to_datetime(min(df.index.values[0] for df in dfs if len(df))).strftime(
+            "%Y-%m-%d"
+        ),
+        pd.to_datetime(max(df.index.values[-1] for df in dfs if len(df))).strftime(
+            "%Y-%m-%d"
+        ),
     )
 
 
@@ -706,7 +723,7 @@ def analyse_view_clones_ts_fragments() -> pd.DataFrame:
     basename_suffix = "_views_clones_series_fragment.csv"
     csvpaths = _glob_csvpaths(basename_suffix)
 
-    snapshot_dfs = []
+    snapshot_dfs: list[pd.DataFrame] = []
     column_names_seen: Set[str] = set()
 
     for p in csvpaths:
@@ -870,14 +887,14 @@ def analyse_view_clones_ts_fragments() -> pd.DataFrame:
     # data) we want to look for the maximum data value for any given timestamp.
     # Using that method, we effectively ignore said cutoff artifact. In short:
     # group by timestamp (index), take the maximum.
-    df_agg = dfall.groupby(dfall.index).max()
+    df_agg: pd.DataFrame = dfall.groupby(dfall.index).max()
     log.info("shape of dataframe after dropping duplicates: %s", df_agg.shape)
 
     # Get time range, to be returned by this function. Used later for setting
     # plot x_limit in all views/clones plot, but also in other plots in the
     # report (views/clones is likely the most complete data -- i.e. the  widest
     # time window).
-    date_axis_lim = gen_date_axis_lim((df_agg,))
+    date_axis_lim = gen_date_axis_lim([df_agg])
     log.info("time range of views/clones data: %s", date_axis_lim)
 
     # Write aggregate
@@ -1127,7 +1144,31 @@ def analyse_view_clones_ts_fragments() -> pd.DataFrame:
     return df_agg_for_return
 
 
-def add_stargazers_section(df, date_axis_lim, starts_earlier_than_vc_data: bool):
+def add_stargazers_section(
+    df: pd.DataFrame,
+    date_axis_lim: Tuple[str, str],
+    starts_earlier_than_vc_data: None | bool,
+):
+    """
+
+    Include a markdown section also for zero length time series (no stars)
+    """
+    if not len(df):
+        assert starts_earlier_than_vc_data is None
+
+        MD_REPORT.write(
+            textwrap.dedent(
+                """
+
+        ## Stargazers
+
+        This repository has no stars yet.
+
+        """
+            )
+        )
+        return
+
     # date_axis_lim is expected to be of the form ["2019-01-01", "2019-12-31"]
 
     x_kwargs = DATETIME_AXIS_PROPERTIES.copy()
@@ -1181,7 +1222,7 @@ def add_stargazers_section(df, date_axis_lim, starts_earlier_than_vc_data: bool)
     if starts_earlier_than_vc_data:
         MD_REPORT.write(
             "Note: this plot shows a larger time frame than the "
-            + "the view/clone plots above "
+            + "view/clone plots above "
             + "because the star/fork data contains earlier samples.\n\n"
         )
 
@@ -1190,7 +1231,31 @@ def add_stargazers_section(df, date_axis_lim, starts_earlier_than_vc_data: bool)
     )
 
 
-def add_fork_section(df, date_axis_lim, starts_earlier_than_vc_data: bool):
+def add_fork_section(
+    df: pd.DataFrame,
+    date_axis_lim: Tuple[str, str],
+    starts_earlier_than_vc_data: None | bool,
+):
+    """
+
+    Include a markdown section also for zero length time series (no forks)
+    """
+    if not len(df):
+        assert starts_earlier_than_vc_data is None
+
+        MD_REPORT.write(
+            textwrap.dedent(
+                """
+
+        ## Forks
+
+        This repository has no forks yet.
+
+        """
+            )
+        )
+        return
+
     # date_axis_lim is expected to be of the form ["2019-01-01", "2019-12-31"])
 
     x_kwargs = DATETIME_AXIS_PROPERTIES.copy()
@@ -1244,7 +1309,7 @@ def add_fork_section(df, date_axis_lim, starts_earlier_than_vc_data: bool):
     if starts_earlier_than_vc_data:
         MD_REPORT.write(
             "Note: this plot shows a larger time frame than the "
-            + "the view/clone plots above "
+            + "view/clone plots above "
             + "because the star/fork data contains earlier samples.\n\n"
         )
 

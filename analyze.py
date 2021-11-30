@@ -24,7 +24,7 @@ import shutil
 import sys
 import tempfile
 
-from typing import List, Set, Any, Optional, Tuple
+from typing import Iterable, Set, Any, Optional, Tuple
 from datetime import datetime
 from io import StringIO
 
@@ -61,7 +61,7 @@ ARGS: Any = None
 # Individual code sections are supposed to add to this in-memory Markdown
 # document as they desire.
 MD_REPORT = StringIO()
-JS_FOOTER_LINES: List[str] = []
+JS_FOOTER_LINES: list[str] = []
 
 # https://github.com/vega/vega-embed#options -- use SVG renderer so that PDF
 # export (print) from browser view yields arbitrarily scalable (vector)
@@ -78,7 +78,7 @@ DATETIME_AXIS_PROPERTIES = {
 }
 
 
-def main():
+def main() -> None:
     if not os.environ.get("GHRS_GITHUB_API_TOKEN", None):
         sys.exit("error: environment variable GHRS_GITHUB_API_TOKEN empty or not set")
 
@@ -150,7 +150,7 @@ def main():
     finalize_and_render_report()
 
 
-def gen_date_axis_lim(dfs) -> Tuple[str, str]:
+def gen_date_axis_lim(dfs: Iterable[pd.DataFrame]) -> Tuple[str, str]:
     # Find minimal first timestamp across dataframes, and maximal last
     # timestamp. Return in string representation, example:
     # ['2020-03-18', '2021-01-03']
@@ -706,7 +706,7 @@ def analyse_view_clones_ts_fragments() -> pd.DataFrame:
     basename_suffix = "_views_clones_series_fragment.csv"
     csvpaths = _glob_csvpaths(basename_suffix)
 
-    snapshot_dfs = []
+    snapshot_dfs: list[pd.DataFrame] = []
     column_names_seen: Set[str] = set()
 
     for p in csvpaths:
@@ -870,14 +870,14 @@ def analyse_view_clones_ts_fragments() -> pd.DataFrame:
     # data) we want to look for the maximum data value for any given timestamp.
     # Using that method, we effectively ignore said cutoff artifact. In short:
     # group by timestamp (index), take the maximum.
-    df_agg = dfall.groupby(dfall.index).max()
+    df_agg: pd.DataFrame = dfall.groupby(dfall.index).max()
     log.info("shape of dataframe after dropping duplicates: %s", df_agg.shape)
 
     # Get time range, to be returned by this function. Used later for setting
     # plot x_limit in all views/clones plot, but also in other plots in the
     # report (views/clones is likely the most complete data -- i.e. the  widest
     # time window).
-    date_axis_lim = gen_date_axis_lim((df_agg,))
+    date_axis_lim = gen_date_axis_lim([df_agg])
     log.info("time range of views/clones data: %s", date_axis_lim)
 
     # Write aggregate

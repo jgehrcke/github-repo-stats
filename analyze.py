@@ -155,9 +155,16 @@ def gen_date_axis_lim(dfs: Iterable[pd.DataFrame]) -> Tuple[str, str]:
     # timestamp. Return in string representation, example:
     # ['2020-03-18', '2021-01-03']
     # Can be used for setting time axis limits in Altair.
+
+    # If there is not at least one non-zero length dataframe in the sequence
+    # then min()/max() will throw a ValueError.
     return (
-        pd.to_datetime(min(df.index.values[0] for df in dfs)).strftime("%Y-%m-%d"),
-        pd.to_datetime(max(df.index.values[-1] for df in dfs)).strftime("%Y-%m-%d"),
+        pd.to_datetime(min(df.index.values[0] for df in dfs if len(df))).strftime(
+            "%Y-%m-%d"
+        ),
+        pd.to_datetime(max(df.index.values[-1] for df in dfs if len(df))).strftime(
+            "%Y-%m-%d"
+        ),
     )
 
 

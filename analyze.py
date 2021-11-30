@@ -110,18 +110,28 @@ def main() -> None:
     sf_date_axis_lim = gen_date_axis_lim((df_vc_agg, df_stargazers, df_forks))
     log.info("time window for stargazer/fork data: %s", sf_date_axis_lim)
 
-    sf_starts_earlier_than_vc_data = (
-        min(df_stargazers.index.values.min(), df_forks.index.values.min())
-        < df_vc_agg.index.values.min()
-    )
-
-    if len(df_stargazers):
-        add_stargazers_section(
-            df_stargazers, sf_date_axis_lim, sf_starts_earlier_than_vc_data
+    # If either of these two time series contains at least one data point then
+    # `sf_date_axis_lim` is meaningful. Calculate non-None
+    # `sf_starts_earlier_than_vc_data`.
+    sf_starts_earlier_than_vc_data: None | bool = None
+    if len(df_stargazers) or len(df_forks):
+        # See if stars and/or fork timeseries starts earlier than view/count
+        # time series. Do not crash when one of both data frames is of zero
+        # length. Require sorted index.
+        sf_starts_earlier_than_vc_data = (
+            min(d.index.values[0] for d in [df_stargazers, df_forks] if len(d))
+            < df_vc_agg.index.values[0]
         )
 
-    if len(df_forks):
-        add_fork_section(df_forks, sf_date_axis_lim, sf_starts_earlier_than_vc_data)
+    # df_stargazers and df_forks may both be of zero length, in which case
+    # the values for sf_date_axis_lim and sf_starts_earlier_than_vc_data are
+    # meaningless. The two functions are expected to generate proper content
+    # for
+    add_stargazers_section(
+        df_stargazers, sf_date_axis_lim, sf_starts_earlier_than_vc_data
+    )
+
+    add_fork_section(df_forks, sf_date_axis_lim, sf_starts_earlier_than_vc_data)
 
     report_pdf_pagebreak()
 
@@ -1134,7 +1144,31 @@ def analyse_view_clones_ts_fragments() -> pd.DataFrame:
     return df_agg_for_return
 
 
-def add_stargazers_section(df, date_axis_lim, starts_earlier_than_vc_data: bool):
+def add_stargazers_section(
+    df: pd.DataFrame,
+    date_axis_lim: Tuple[str, str],
+    starts_earlier_than_vc_data: None | bool,
+):
+    """
+
+    Include a markdown section also for zero length time series (no stars)
+    """
+    if not len(df):
+        assert starts_earlier_than_vc_data is None
+
+        MD_REPORT.write(
+            textwrap.dedent(
+                """
+
+        ## Stargazers
+
+        This repository has no stars yet.
+
+        """
+            )
+        )
+        return
+
     # date_axis_lim is expected to be of the form ["2019-01-01", "2019-12-31"]
 
     x_kwargs = DATETIME_AXIS_PROPERTIES.copy()
@@ -1197,7 +1231,31 @@ def add_stargazers_section(df, date_axis_lim, starts_earlier_than_vc_data: bool)
     )
 
 
-def add_fork_section(df, date_axis_lim, starts_earlier_than_vc_data: bool):
+def add_fork_section(
+    df: pd.DataFrame,
+    date_axis_lim: Tuple[str, str],
+    starts_earlier_than_vc_data: None | bool,
+):
+    """
+
+    Include a markdown section also for zero length time series (no forks)
+    """
+    if not len(df):
+        assert starts_earlier_than_vc_data is None
+
+        MD_REPORT.write(
+            textwrap.dedent(
+                """
+
+        ## Forks
+
+        This repository has no forks yet.
+
+        """
+            )
+        )
+        return
+
     # date_axis_lim is expected to be of the form ["2019-01-01", "2019-12-31"])
 
     x_kwargs = DATETIME_AXIS_PROPERTIES.copy()

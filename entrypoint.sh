@@ -65,8 +65,8 @@ cd "${STATS_REPOSPEC}"
 
 echo "operating in $(pwd)"
 
-mkdir newdata
-echo "Fetch new data snapshot for ${STATS_REPOSPEC}"
+mkdir newsnapshots
+echo "fetch.py for ${STATS_REPOSPEC}"
 
 # Have CPython emit its stderr data immediately to the attached streams to
 # reduce the likelihood for bad order of log lines in the GH Action log viewer
@@ -76,7 +76,7 @@ echo "Fetch new data snapshot for ${STATS_REPOSPEC}"
 export PYTHONUNBUFFERED="on"
 
 set +e
-python /fetch.py "${STATS_REPOSPEC}" --output-directory=newdata
+python /fetch.py "${STATS_REPOSPEC}" --snapshot-directory=newsnapshots
 FETCH_ECODE=$?
 set -e
 
@@ -91,12 +91,12 @@ if [ $FETCH_ECODE -ne 0 ]; then
 fi
 
 echo "fetch.py returned with exit code 0. proceed."
-echo "tree in $(pwd)/newdata:"
-tree newdata
+echo "tree in $(pwd)/newsnapshots:"
+tree newsnapshots
 
 set -x
 mkdir -p ghrs-data/snapshots
-cp -a newdata/* ghrs-data/snapshots || echo "copy failed, ignore (continue)"
+cp -a newsnapshots/* ghrs-data/snapshots || echo "copy failed, ignore (continue)"
 
 # New data files: show them from git's point of view.
 git status --untracked=no --porcelain

@@ -74,7 +74,7 @@ def main() -> None:
         df_paths_snapshot_now,
     ) = fetch_all_traffic_api_endpoints(repo)
 
-    outdir_path = args.output_directory
+    outdir_path = args.snapshot_directory
     log.info("current working directory: %s", os.getcwd())
     log.info("write output CSV files to directory: %s", outdir_path)
 
@@ -157,10 +157,11 @@ def parse_args():
     )
 
     parser.add_argument(
-        "--output-directory",
+        "--snapshot-directory",
         type=str,
         default="",
-        help="default: _ghrs_{owner}_{repo}",
+        help="Snapshot/fragment directory. Default: _ghrs_{owner}_{repo}",
+    )
     )
 
     args = parser.parse_args()
@@ -171,26 +172,26 @@ def parse_args():
     ownerid, repoid = args.repo.split("/")
     outdir_path_default = f"_ghrs_{ownerid}_{repoid}"
 
-    if not args.output_directory:
-        args.output_directory = outdir_path_default
+    if not args.snapshot_directory:
+        args.snapshot_directory = outdir_path_default
 
     log.info("processed args: %s", json.dumps(vars(args), indent=2))
 
-    if os.path.exists(args.output_directory):
-        if not os.path.isdir(args.output_directory):
+    if os.path.exists(args.snapshot_directory):
+        if not os.path.isdir(args.snapshot_directory):
             log.error(
                 "the specified output directory path does not point to a directory: %s",
-                args.output_directory,
+                args.snapshot_directory,
             )
             sys.exit(1)
 
-        log.info("output directory already exists: %s", args.output_directory)
+        log.info("output directory already exists: %s", args.snapshot_directory)
 
     else:
-        log.info("create output directory: %s", args.output_directory)
-        log.info("absolute path: %s", os.path.abspath(args.output_directory))
+        log.info("create output directory: %s", args.snapshot_directory)
+        log.info("absolute path: %s", os.path.abspath(args.snapshot_directory))
         # If there is a race: do not error out.
-        os.makedirs(args.output_directory, exist_ok=True)
+        os.makedirs(args.snapshot_directory, exist_ok=True)
 
     return args
 

@@ -20,11 +20,13 @@ import json
 from datetime import datetime
 
 import sys
+from typing import Tuple
+
 
 import pandas as pd
 from github import Github
 import requests
-import retrying
+import retrying  # type: ignore
 import pytz
 
 
@@ -59,7 +61,7 @@ if not os.environ.get("GHRS_GITHUB_API_TOKEN", None):
 GHUB = Github(login_or_token=os.environ["GHRS_GITHUB_API_TOKEN"].strip(), per_page=100)
 
 
-def main():
+def main() -> None:
     args = parse_args()
     # Full name of repo with slash (including owner/org)
     repo = GHUB.get_repo(args.repo)
@@ -107,7 +109,9 @@ def main():
     log.info("done!")
 
 
-def fetch_all_traffic_api_endpoints(repo):
+def fetch_all_traffic_api_endpoints(
+    repo,
+) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
 
     log.info("fetch top referrers")
     df_referrers_snapshot_now = referrers_to_df(fetch_top_referrers(repo))
@@ -191,7 +195,7 @@ def parse_args():
     return args
 
 
-def referrers_to_df(top_referrers):
+def referrers_to_df(top_referrers) -> pd.DataFrame:
     series_referrers = []
     series_views_unique = []
     series_views_total = []
@@ -215,7 +219,7 @@ def referrers_to_df(top_referrers):
     return df
 
 
-def paths_to_df(top_paths):
+def paths_to_df(top_paths) -> pd.DataFrame:
 
     series_url_paths = []
     series_views_unique = []
@@ -242,7 +246,7 @@ def paths_to_df(top_paths):
     return df
 
 
-def clones_or_views_to_df(items, metric):
+def clones_or_views_to_df(items, metric) -> pd.DataFrame:
     assert metric in ["clones", "views"]
 
     series_count_total = []

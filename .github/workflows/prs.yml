@@ -24,7 +24,7 @@ jobs:
       - name: black
         run: black --check *.py
       - name: mypy
-        run: mypy analyze.py
+        run: mypy analyze.py fetch.py
       - name: test main Dockerfile
         run: make image
       - name: test fetch.py in container

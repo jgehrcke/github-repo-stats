@@ -1,12 +1,13 @@
 GIT_COMMIT_HASH ?= $(shell git rev-parse --short=9 HEAD)
 
-IMAGE_NAME = jgehrcke/github-repo-stats-base:$(GIT_COMMIT_HASH)
+BASE_IMAGE_NAME = jgehrcke/github-repo-stats-base:bfc24d971
+NEW_BASE_IMAGE_NAME = jgehrcke/github-repo-stats-base:$(GIT_COMMIT_HASH)
 
-base-image:
-	docker build -f base.Dockerfile . -t $(IMAGE_NAME)
+new-base-image:
+	docker build -f base.Dockerfile . -t $(NEW_BASE_IMAGE_NAME)
 
-base-image-push:
-	docker push $(IMAGE_NAME)
+new-base-image-push:
+	docker push $(NEW_BASE_IMAGE_NAME)
 
 # This is for testing the container image build based on Dockerfile, as
 # executed by GH actions.

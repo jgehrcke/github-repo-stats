@@ -29,7 +29,6 @@ from datetime import datetime
 from io import StringIO
 
 import pandas as pd
-from github import Github  # type: ignore
 import pytz
 import altair as alt  # type: ignore
 
@@ -79,14 +78,11 @@ DATETIME_AXIS_PROPERTIES = {
 
 
 def main() -> None:
-    if not os.environ.get("GHRS_GITHUB_API_TOKEN", None):
-        sys.exit("error: environment variable GHRS_GITHUB_API_TOKEN empty or not set")
-
     parse_args()
     configure_altair()
 
-    df_stargazers = get_stars_over_time()
-    df_forks = get_forks_over_time()
+    df_stargazers = read_stars_over_time_from_csv()
+    df_forks = read_forks_over_time_from_csv()
 
     gen_report_preamble()
 
@@ -1332,7 +1328,7 @@ def symlog_or_lin(df, colname, threshold):
     return "linear"
 
 
-def get_stars_over_time() -> pd.DataFrame:
+def read_stars_over_time_from_csv() -> pd.DataFrame:
 
     if not ARGS.stargazer_ts_inpath:
         log.info("stargazer_ts_inpath not provided, return emtpy df")
@@ -1367,7 +1363,7 @@ def get_stars_over_time() -> pd.DataFrame:
     return df
 
 
-def get_forks_over_time() -> pd.DataFrame:
+def read_forks_over_time_from_csv() -> pd.DataFrame:
 
     if not ARGS.fork_ts_inpath:
         log.info("fork_ts_inpath not provided, return emtpy df")

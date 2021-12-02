@@ -19,8 +19,8 @@ jobs:
         run: make bats-runner
       - name: lint (flake8, black, mypy...)
         run: make lint
-      - name: test main Dockerfile
-        run: make action-image (builds jgehrcke/github-repo-stats:local)
+      - name: test main Dockerfile (builds jgehrcke/github-repo-stats:local)
+        run: make action-image
       - name: test fetch.py in action container
         env:
           GHRS_GITHUB_API_TOKEN: ${{ secrets.ghrs_github_api_token }}

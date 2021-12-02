@@ -13,3 +13,7 @@ new-base-image-push:
 # executed by GH actions.
 image:
 	docker build -f Dockerfile . -t jgehrcke/github-repo-stats:local
+
+bats-test:
+	docker run --entrypoint "/bin/bash" -v $(shell pwd):/cwd $(BASE_IMAGE_NAME) \
+		-c 'cd /cwd && bats --print-output-on-failure tests/analyze.bats'

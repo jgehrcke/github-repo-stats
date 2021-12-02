@@ -76,7 +76,13 @@ echo "fetch.py for ${STATS_REPOSPEC}"
 export PYTHONUNBUFFERED="on"
 
 set +e
-python /fetch.py "${STATS_REPOSPEC}" --snapshot-directory=newsnapshots
+# Note that the *-raw.csv files contain each star/fork event. These files do
+# for now not need to be in the repository (but it will make sense to store
+# them there once addressing the 10k star problem).
+python /fetch.py "${STATS_REPOSPEC}" \
+    --snapshot-directory=newsnapshots \
+    --fork-ts-outpath=forks-raw.csv \
+    --stargazer-ts-outpath=stars-raw.csv
 FETCH_ECODE=$?
 set -e
 
@@ -118,6 +124,8 @@ python /analyze.py \
     --resources-directory /resources \
     --output-directory latest-report \
     --outfile-prefix "" \
+    --stargazer-ts-inpath "stars-raw.csv" \
+    --fork-ts-inpath "forks-raw.csv" \
     --stargazer-ts-resampled-outpath "ghrs-data/stargazers.csv" \
     --fork-ts-resampled-outpath "ghrs-data/forks.csv" \
     --views-clones-aggregate-outpath "ghrs-data/views_clones_aggregate.csv" \

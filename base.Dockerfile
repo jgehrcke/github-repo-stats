@@ -9,11 +9,6 @@ RUN echo "deb [arch=amd64]  http://dl.google.com/linux/chrome/deb/ stable main" 
 RUN apt-get -y update
 RUN apt-get -y install google-chrome-stable
 
-# Install bats for running cmdline tests, also used in GHRS CI
-RUN git clone https://github.com/bats-core/bats-core.git && cd bats-core && \
-    git checkout v1.5.0 && ./install.sh /usr/local
-# Expect `bats` to work.
-RUN bats --help
 RUN pip install pip==21.3.1
 
 # Dependencies for fetch.py & analyze.py

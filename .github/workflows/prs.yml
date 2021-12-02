@@ -15,21 +15,13 @@ jobs:
         uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
-      - name: bats-based test
-        run: make bats-test
-      - name: install linting dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements-ci.txt
-      - name: flake8
-        run: flake8
-      - name: black
-        run: black --check *.py
-      - name: mypy
-        run: mypy analyze.py fetch.py
-      - name: test main Dockerfile
-        run: make image
-      - name: test fetch.py in container
+      - name: bats-based tests
+        run: make bats-runner
+      - name: lint (flake8, black, mypy...)
+        run: make lint
+      - name: test main Dockerfile (builds jgehrcke/github-repo-stats:local)
+        run: make action-image
+      - name: test fetch.py in action container
         env:
           GHRS_GITHUB_API_TOKEN: ${{ secrets.ghrs_github_api_token }}
         run: |
@@ -41,7 +33,7 @@ jobs:
             'set -o errexit && cd /cwd
              python fetch.py jgehrcke/github-repo-stats
             '
-      - name: test analyze.py in container
+      - name: test analyze.py in action container
         env:
           GHRS_GITHUB_API_TOKEN: ${{ secrets.ghrs_github_api_token }}
         run: |

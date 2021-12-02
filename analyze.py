@@ -1150,8 +1150,6 @@ def add_stargazers_section(
     Include a markdown section also for zero length time series (no stars)
     """
     if not len(df):
-        assert starts_earlier_than_vc_data is None
-
         MD_REPORT.write(
             textwrap.dedent(
                 """
@@ -1237,8 +1235,6 @@ def add_fork_section(
     Include a markdown section also for zero length time series (no forks)
     """
     if not len(df):
-        assert starts_earlier_than_vc_data is None
-
         MD_REPORT.write(
             textwrap.dedent(
                 """

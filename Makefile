@@ -1,6 +1,6 @@
 GIT_COMMIT_HASH ?= $(shell git rev-parse --short=9 HEAD)
 
-BASE_IMAGE_NAME = jgehrcke/github-repo-stats-base:3aa1455e0
+BASE_IMAGE_NAME = jgehrcke/github-repo-stats-base:5e4b35d29
 NEW_BASE_IMAGE_NAME = jgehrcke/github-repo-stats-base:$(GIT_COMMIT_HASH)
 
 new-base-image:

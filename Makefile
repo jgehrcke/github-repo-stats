@@ -25,10 +25,16 @@ ci-image:
 action-image:
 	docker build -f Dockerfile . -t jgehrcke/github-repo-stats:local
 
-.PHONY: bats-test
-bats-test: ci-image
+.PHONY: bats-runner
+bats-runner: ci-image
 	docker run --entrypoint "/bin/bash" -v $(shell pwd):/cwd $(CI_IMAGE) \
 		-c "cd /cwd && bats \
 			--print-output-on-failure \
 			tests/analyze.bats \
 		"
+
+.PHONY: lint
+lint: ci-image
+	flake8 analyze.py fetch.py pdf.py
+	black --check analyze.py fetch.py pdf.py
+	mypy analyze.py fetch.py

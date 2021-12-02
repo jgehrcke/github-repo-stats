@@ -1,6 +1,10 @@
-FROM jgehrcke/github-repo-stats-base:5e4b35d29
+FROM jgehrcke/github-repo-stats-base:6e6c3e4f8
 
-# Install bats for running cmdline tests, also used in GHRS CI
+COPY requirements-ci.txt .
+RUN pip install -r requirements-ci.txt
+
+# Install bats for running cmdline tests. This is the image used when invoking
+# `make bats-test`.
 RUN git clone https://github.com/bats-core/bats-core.git && cd bats-core && \
     git checkout v1.5.0 && ./install.sh /usr/local
 

@@ -1344,6 +1344,10 @@ def read_stars_over_time_from_csv() -> pd.DataFrame:
     df.index.rename("time", inplace=True)
     log.info("stars_cumulative, raw data: %s", df["stars_cumulative"])
 
+    if not len(df):
+        log.info("CSV file did not contain data, return empty df")
+        return df
+
     if ARGS.stargazer_ts_resampled_outpath:
         # The CSV file should contain integers after all (no ".0"), therefore
         # cast to int. There are no NaNs to be expected, i.e. this should work
@@ -1378,6 +1382,10 @@ def read_forks_over_time_from_csv() -> pd.DataFrame:
     # df = df.astype(int)
     df.index.rename("time", inplace=True)
     log.info("forks_cumulative, raw data: %s", df["forks_cumulative"])
+
+    if not len(df):
+        log.info("CSV file did not contain data, return empty df")
+        return df
 
     if ARGS.fork_ts_resampled_outpath:
         # The CSV file should contain integers after all (no ".0"), therefore

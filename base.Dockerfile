@@ -9,5 +9,17 @@ RUN echo "deb [arch=amd64]  http://dl.google.com/linux/chrome/deb/ stable main" 
 RUN apt-get -y update
 RUN apt-get -y install google-chrome-stable
 
-RUN pip install pandas==1.3.4 PyGitHub==1.55 pytz retrying \
-    selenium==3.141.0 webdriver_manager carbonplan[styles] altair==4.2.0rc1
+# Install bats for running cmdline tests, also used in GHRS CI
+RUN git clone https://github.com/bats-core/bats-core.git && cd bats-core && \
+    git checkout v1.5.0 && ./install.sh /usr/local
+# Expect `bats` to work.
+RUN bats --help
+RUN pip install pip==21.3.1
+
+# Dependencies for fetch.py & analyze.py
+COPY requirements-fa.txt .
+RUN pip install -r requirements-fa.txt
+
+# Dependencies for pdf.py
+# Explore bumping selenium to 4.x
+RUN pip install selenium==3.141.0 webdriver_manager==3.5.2

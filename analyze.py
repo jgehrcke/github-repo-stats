@@ -821,11 +821,15 @@ def analyse_view_clones_ts_fragments() -> pd.DataFrame:
             )
 
     if len(snapshot_dfs) == 0 and df_prev_agg is None:
-        log.info(
-            "leave early: no data for views/clones: no snapshots, no previous aggregate"
+        # The report structure is not prepared to make sense w/o availability
+        # of view/clone data. This state is forbidden for now. In the future,
+        # it miiiight make sense to allow this special case: only show
+        # fork/star time series. But that is super distant from the actual
+        # purpose of this GHRS project.
+        log.error(
+            "unexpected: no data for views/clones: no snapshots, no previous aggregate"
         )
-        # Return empty dataframe to keep logic in main() simple
-        return pd.DataFrame()
+        sys.exit(1)
 
     log.info("build aggregate, drop duplicate data")
     # Each dataframe in `snapshot_dfs` corresponds to one time series fragment

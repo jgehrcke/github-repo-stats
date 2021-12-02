@@ -29,7 +29,6 @@ from datetime import datetime
 from io import StringIO
 
 import pandas as pd
-from github import Github  # type: ignore
 import pytz
 import altair as alt  # type: ignore
 
@@ -79,14 +78,11 @@ DATETIME_AXIS_PROPERTIES = {
 
 
 def main() -> None:
-    if not os.environ.get("GHRS_GITHUB_API_TOKEN", None):
-        sys.exit("error: environment variable GHRS_GITHUB_API_TOKEN empty or not set")
-
     parse_args()
     configure_altair()
 
-    df_stargazers = get_stars_over_time()
-    df_forks = get_forks_over_time()
+    df_stargazers = read_stars_over_time_from_csv()
+    df_forks = read_forks_over_time_from_csv()
 
     gen_report_preamble()
 
@@ -1154,8 +1150,6 @@ def add_stargazers_section(
     Include a markdown section also for zero length time series (no stars)
     """
     if not len(df):
-        assert starts_earlier_than_vc_data is None
-
         MD_REPORT.write(
             textwrap.dedent(
                 """
@@ -1241,8 +1235,6 @@ def add_fork_section(
     Include a markdown section also for zero length time series (no forks)
     """
     if not len(df):
-        assert starts_earlier_than_vc_data is None
-
         MD_REPORT.write(
             textwrap.dedent(
                 """
@@ -1332,74 +1324,26 @@ def symlog_or_lin(df, colname, threshold):
     return "linear"
 
 
-def get_stars_over_time() -> pd.DataFrame:
-    # TODO: for ~10k stars repositories, this operation is too costly for doing
-    # it as part of each analyzer invocation. Move this to the fetcher, and
-    # persist the data.
-    log.info("fetch stargazer time series for repo %s", ARGS.repospec)
+def read_stars_over_time_from_csv() -> pd.DataFrame:
 
-    hub = Github(
-        login_or_token=os.environ["GHRS_GITHUB_API_TOKEN"].strip(), per_page=100
+    if not ARGS.stargazer_ts_inpath:
+        log.info("stargazer_ts_inpath not provided, return emtpy df")
+        return pd.DataFrame()
+
+    log.info("Parse stargazer time series (raw) CSV: %s", ARGS.stargazer_ts_inpath)
+    df = pd.read_csv(
+        ARGS.stargazer_ts_inpath,
+        index_col=["time_iso8601"],
+        date_parser=lambda col: pd.to_datetime(col, utc=True),
     )
-    repo = hub.get_repo(ARGS.repospec)
-
-    reqlimit_before = hub.get_rate_limit().core.remaining
-
-    log.info("GH request limit before fetch operation: %s", reqlimit_before)
-
-    gazers = []
-
-    # TODO for addressing the 10ks challenge: save state to disk, and refresh
-    # using reverse order iteration. See for repo in user.get_repos().reversed
-    for count, gazer in enumerate(repo.get_stargazers_with_dates(), 1):
-        # Store `PullRequest` object with integer key in dictionary.
-        gazers.append(gazer)
-        if count % 200 == 0:
-            log.info("%s gazers fetched", count)
-
-    reqlimit_after = hub.get_rate_limit().core.remaining
-    log.info("GH request limit after fetch operation: %s", reqlimit_after)
-    log.info("http requests made (approximately): %s", reqlimit_before - reqlimit_after)
-    log.info("stargazer count: %s", len(gazers))
-
-    # The GitHub API returns ISO 8601 timestamp strings encoding the timezone
-    # via the Z suffix, i.e. Zulu time, i.e. UTC. pygithub doesn't parze that
-    # timezone. That is, whereas the API returns `starred_at` in UTC, the
-    # datetime obj created by pygithub is a naive one. Correct for that.
-    startimes_aware = [pytz.timezone("UTC").localize(g.starred_at) for g in gazers]
-
-    # Work towards a dataframe of the following shape:
-    #                            star_events  stars_cumulative
-    # time
-    # 2020-11-26 16:25:37+00:00            1                 1
-    # 2020-11-26 16:27:23+00:00            1                 2
-    # 2020-11-26 16:30:05+00:00            1                 3
-    # 2020-11-26 17:31:57+00:00            1                 4
-    # 2020-11-26 17:48:48+00:00            1                 5
-    # ...                                ...               ...
-    # 2020-12-19 19:48:58+00:00            1               327
-    # 2020-12-22 04:44:35+00:00            1               328
-    # 2020-12-22 19:00:42+00:00            1               329
-    # 2020-12-25 05:01:42+00:00            1               330
-    # 2020-12-28 01:07:55+00:00            1               331
-
-    # Create sorted pandas DatetimeIndex
-    dtidx = pd.to_datetime(startimes_aware)
-    dtidx = dtidx.sort_values()
-
-    # Each timestamp corresponds to *1* star event. Build cumulative sum over
-    # time.
-    df = pd.DataFrame(
-        data={"star_events": [1] * len(gazers)},
-        index=dtidx,
-    )
-    df.index.name = "time"
-
-    df["stars_cumulative"] = df["star_events"].cumsum()
-
+    # df = df.astype(int)
+    df.index.rename("time", inplace=True)
     log.info("stars_cumulative, raw data: %s", df["stars_cumulative"])
 
-    # As noted above, this should actually be part of the fetcher.
+    if not len(df):
+        log.info("CSV file did not contain data, return empty df")
+        return df
+
     if ARGS.stargazer_ts_resampled_outpath:
         # The CSV file should contain integers after all (no ".0"), therefore
         # cast to int. There are no NaNs to be expected, i.e. this should work
@@ -1419,51 +1363,26 @@ def get_stars_over_time() -> pd.DataFrame:
     return df
 
 
-def get_forks_over_time() -> pd.DataFrame:
-    # TODO: for ~10k forks repositories, this operation is too costly for doing
-    # it as part of each analyzer invocation. Move this to the fetcher, and
-    # persist the data.
-    log.info("fetch fork time series for repo %s", ARGS.repospec)
+def read_forks_over_time_from_csv() -> pd.DataFrame:
 
-    hub = Github(
-        login_or_token=os.environ["GHRS_GITHUB_API_TOKEN"].strip(), per_page=100
+    if not ARGS.fork_ts_inpath:
+        log.info("fork_ts_inpath not provided, return emtpy df")
+        return pd.DataFrame()
+
+    log.info("Parse fork time series (raw) CSV: %s", ARGS.fork_ts_inpath)
+    df = pd.read_csv(
+        ARGS.fork_ts_inpath,
+        index_col=["time_iso8601"],
+        date_parser=lambda col: pd.to_datetime(col, utc=True),
     )
-    repo = hub.get_repo(ARGS.repospec)
-    reqlimit_before = hub.get_rate_limit().core.remaining
-    log.info("GH request limit before fetch operation: %s", reqlimit_before)
+    # df = df.astype(int)
+    df.index.rename("time", inplace=True)
+    log.info("forks_cumulative, raw data: %s", df["forks_cumulative"])
 
-    forks = []
-    for count, fork in enumerate(repo.get_forks(), 1):
-        # Store `PullRequest` object with integer key in dictionary.
-        forks.append(fork)
-        if count % 200 == 0:
-            log.info("%s forks fetched", count)
+    if not len(df):
+        log.info("CSV file did not contain data, return empty df")
+        return df
 
-    reqlimit_after = hub.get_rate_limit().core.remaining
-    log.info("GH request limit after fetch operation: %s", reqlimit_after)
-    log.info("http requests made (approximately): %s", reqlimit_before - reqlimit_after)
-    log.info("current fork count: %s", len(forks))
-
-    # The GitHub API returns ISO 8601 timestamp strings encoding the timezone
-    # via the Z suffix, i.e. Zulu time, i.e. UTC. pygithub doesn't parse that
-    # timezone. That is, whereas the API returns `starred_at` in UTC, the
-    # datetime obj created by pygithub is a naive one. Correct for that.
-    forktimes_aware = [pytz.timezone("UTC").localize(f.created_at) for f in forks]
-
-    # Create sorted pandas DatetimeIndex
-    dtidx = pd.to_datetime(forktimes_aware)
-    dtidx = dtidx.sort_values()
-
-    # Each timestamp corresponds to *1* fork event. Build cumulative sum over
-    # time.
-    df = pd.DataFrame(
-        data={"fork_events": [1] * len(forks)},
-        index=dtidx,
-    )
-    df.index.name = "time"
-    df["forks_cumulative"] = df["fork_events"].cumsum()
-
-    # As noted above, this should actually be part of the fetcher.
     if ARGS.fork_ts_resampled_outpath:
         # The CSV file should contain integers after all (no ".0"), therefore
         # cast to int. There are no NaNs to be expected, i.e. this should work
@@ -1589,14 +1508,27 @@ def parse_args():
         "--stargazer-ts-resampled-outpath",
         default="",
         metavar="PATH",
-        help="Write resampled stargazer time series to CSV file",
+        help="Write resampled stargazer time series to CSV file (at most one sample per day)",
+    )
+    parser.add_argument(
+        "--stargazer-ts-inpath",
+        default="",
+        metavar="PATH",
+        help="Read raw stargazer time series from CSV file",
     )
 
     parser.add_argument(
         "--fork-ts-resampled-outpath",
         default="",
         metavar="PATH",
-        help="Write resampled fork time series to CSV file",
+        help="Write resampled fork time series to CSV file (at most one sample per day)",
+    )
+
+    parser.add_argument(
+        "--fork-ts-inpath",
+        default="",
+        metavar="PATH",
+        help="Read raw fork time series from CSV file",
     )
 
     parser.add_argument(

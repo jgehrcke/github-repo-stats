@@ -28,7 +28,7 @@ jobs:
       - name: mypy
         run: mypy analyze.py fetch.py
       - name: test main Dockerfile
-        run: make image
+        run: make action-image
       - name: test fetch.py in container
         env:
           GHRS_GITHUB_API_TOKEN: ${{ secrets.ghrs_github_api_token }}

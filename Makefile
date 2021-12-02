@@ -1,6 +1,6 @@
 GIT_COMMIT_HASH ?= $(shell git rev-parse --short=9 HEAD)
 
-BASE_IMAGE_NAME = jgehrcke/github-repo-stats-base:bfc24d971
+BASE_IMAGE_NAME = jgehrcke/github-repo-stats-base:3aa1455e0
 NEW_BASE_IMAGE_NAME = jgehrcke/github-repo-stats-base:$(GIT_COMMIT_HASH)
 
 new-base-image:
@@ -16,4 +16,7 @@ image:
 
 bats-test:
 	docker run --entrypoint "/bin/bash" -v $(shell pwd):/cwd $(BASE_IMAGE_NAME) \
-		-c 'cd /cwd && bats --print-output-on-failure tests/analyze.bats'
+		-c "cd /cwd && bats \
+			--print-output-on-failure \
+			tests/analyze.bats \
+		"

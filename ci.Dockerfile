@@ -18,3 +18,7 @@ RUN stat /bats-libraries/bats-assert/load.bash
 
 # Expect `bats` to work.
 RUN bats --help
+
+# This is also where the current checkout will be mounted to.
+RUN mkdir -p /checkout
+WORKDIR /checkout

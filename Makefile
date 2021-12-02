@@ -35,6 +35,6 @@ bats-runner: ci-image
 
 .PHONY: lint
 lint: ci-image
-	flake8 analyze.py fetch.py pdf.py
-	black --check analyze.py fetch.py pdf.py
-	mypy analyze.py fetch.py
+	docker run -v $(shell pwd):/checkout $(CI_IMAGE) bash -c "flake8 analyze.py fetch.py pdf.py"
+	docker run -v $(shell pwd):/checkout $(CI_IMAGE) bash -c "black --check analyze.py fetch.py pdf.py"
+	docker run -v $(shell pwd):/checkout $(CI_IMAGE) bash -c "mypy analyze.py fetch.py"

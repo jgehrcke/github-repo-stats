@@ -6,7 +6,7 @@ Thanks for all the feedback and contributions.
 
 Report improvements:
 
-* Automatically use semi-logarithmic plotting when it appears to make sense. This is supposed to help in cases of rare traffic spikes much higher than the base line. (With linear plotting, the normal traffic level would then appear to be very close to zero, and variations around it would hardly be visible.)
+* Automatically use semi-logarithmic plotting when it appears to make sense. This is supposed to help in cases of traffic spikes much higher than the baseline. (With linear plotting, the normal traffic level would then appear to be very close to zero, and variations around it would hardly be visible.)
 * Add data point tooltips as mouse hover effect in the HTML report (also see #28).
 * Display cumulative view/clone counts (total count until day of report generation, also see #31).
 * Top referrer/path plots: move the legend so that these plots have the same width as all other plots, making comparison easier.
@@ -30,14 +30,14 @@ Bug fixes:
 Misc:
 
 * Reduce log verbosity.
-* Update a number of dependencies (for example, use Altair 4.2.0 with Vega-Lite 4.17.0).
+* Update several dependencies (for example, use Altair 4.2.0 with Vega-Lite 4.17.0).
 
 **Testing:** important changes coming hand-in-hand with this release are on the testing and continuous integration (CI) front.
-Given the growing user base I did not feel comfortable anymore with the reliance on manual testing.
+Given the growing user base, I did not feel comfortable anymore with the reliance on manual testing.
 I introduced a framework for high-level CLI invocation tests with specific data scenarios, now executed by CI as part of every commit.
 This will help prevent regressions from happening.
 The `README` contains instructions for how to run these tests locally.
-I also feel good about having introduced more linting, and for having added a `mypy` check to CI (starting out with very basic typing information in the code base here and there).
+I have also introduced more linting, and added a `mypy` check to CI (starting out with very basic typing information in the code base here and there).
 
 ## 1.2.0 (2021-09-11)
 

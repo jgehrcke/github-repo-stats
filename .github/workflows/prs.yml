@@ -15,8 +15,8 @@ jobs:
         uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
-      - name: bats-based tests
-        run: make bats-runner
+      - name: bats-based CLI tests
+        run: make clitests
       - name: lint (flake8, black, mypy...)
         run: make lint
       - name: test main Dockerfile (builds jgehrcke/github-repo-stats:local)

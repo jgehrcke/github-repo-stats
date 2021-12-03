@@ -11,7 +11,6 @@ High-level method description:
 * This GitHub Action runs once per day. Each run yields a "snapshot" of repository traffic statistics (influenced by the past 14 days). Snapshots are persisted via git.
 * Each run performs data analysis on all individual snapshots and generates a report from the aggregate — covering an arbitrarily long time frame.
 
-
 ## Demo
 
 * Report:
@@ -110,7 +109,7 @@ jobs:
 
 **Note:** if you set `ghtoken: ${{ secrets.ghrs_github_api_token }}` as above then in the _data_ repository (where the action is executed) you need to have a secret defined, with the name `GHRS_GITHUB_API_TOKEN` (of course you can change the name in both places).
 The content of the secret needs to be an API token that has the `repo` scope for accessing the _stats_ repository.
-You can create such a personal access token under https://github.com/settings/tokens.
+You can create such a personal access token under [github.com/settings/tokens](https://github.com/settings/tokens).
 
 ### Input parameter reference
 

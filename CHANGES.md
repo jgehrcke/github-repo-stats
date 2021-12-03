@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.3.0 (2021-12-03)
+
+This is kind of a big release. Highlights:
+
+* A number of visual report improvements, among others:
+  * Auto-switch to semi-logarithmic plotting. That is useful for example when there's a traffic spike in the much higher than the base line so that variations in times of normal traffic are hardly visible anymore.
+
+
+
 ## 1.2.0 (2021-09-11)
 
 Data handling:

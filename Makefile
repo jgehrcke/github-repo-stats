@@ -27,9 +27,11 @@ action-image:
 
 .PHONY: clitests
 clitests: ci-image
-	docker run --entrypoint "/bin/bash" -v $(shell pwd):/cwd $(CI_IMAGE) \
+	time docker run --entrypoint "/bin/bash" -v $(shell pwd):/cwd $(CI_IMAGE) \
 		-c "cd /cwd && bats \
 			--print-output-on-failure \
+			--timing \
+			--jobs 5 \
 			tests/*.bats \
 		"
 

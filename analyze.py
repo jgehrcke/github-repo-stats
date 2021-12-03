@@ -228,6 +228,11 @@ def finalize_and_render_report():
     log.info("Copy resources directory into output directory")
     shutil.copytree(ARGS.resources_directory, os.path.join(OUTDIR, "resources"))
 
+    # As of the time of writing, the `resources` source directory contains a
+    # CSS file which must be part of the output -- and a template.html file
+    # which is not needed in the output. Simply remove that again.
+    os.unlink(os.path.join(OUTDIR, "resources", "template.html"))
+
     # Generate HTML doc for browser view
     html_template_filepath = gen_pandoc_html_template("html_browser_view")
     run_pandoc(

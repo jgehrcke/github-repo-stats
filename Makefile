@@ -25,12 +25,14 @@ ci-image:
 action-image:
 	docker build -f Dockerfile . -t jgehrcke/github-repo-stats:local
 
-.PHONY: bats-runner
-bats-runner: ci-image
-	docker run --entrypoint "/bin/bash" -v $(shell pwd):/cwd $(CI_IMAGE) \
+.PHONY: clitests
+clitests: ci-image
+	time docker run --entrypoint "/bin/bash" -v $(shell pwd):/cwd $(CI_IMAGE) \
 		-c "cd /cwd && bats \
 			--print-output-on-failure \
-			tests/analyze.bats \
+			--timing \
+			--jobs 5 \
+			tests/*.bats \
 		"
 
 .PHONY: lint

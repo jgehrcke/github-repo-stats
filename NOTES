@@ -1,5 +1,3 @@
-Remove `template.html` from dist (resources)
-
 Auto-detect scenario where semi-logarithmic plotting would help
 (large peak in time window, too little resolution in most part of
 the time window) -- or, always show semi-logarithmic view?
@@ -62,3 +60,5 @@ in the repo that this action is set up in
     /2020-12-xx
 /latest-report
 /README.md
+
+Explore using https://github.com/nektos/act for more confident testing (so that we get get a stronger signal from CI, almost as if we were to run manually in a test repo)

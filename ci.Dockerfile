@@ -1,5 +1,9 @@
 FROM jgehrcke/github-repo-stats-base:6e6c3e4f8
 
+# Install GNU parallel
+RUN apt-get update && apt-get install -y -q --no-install-recommends \
+    parallel && rm -rf /var/lib/apt/lists/*
+
 COPY requirements-ci.txt .
 RUN pip install -r requirements-ci.txt
 

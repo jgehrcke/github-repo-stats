@@ -27,20 +27,24 @@ setup() {
 }
 
 @test "analyze.py: snapshots: some, vcagg: yes, stars: some, forks: some" {
+  assert_not_exist $BATS_TEST_TMPDIR/forks-rs.csv
   run python analyze.py owner/repo tests/data/A/snapshots \
     --resources-directory=resources \
     --output-directory $BATS_TEST_TMPDIR/outdir \
     --outfile-prefix "" \
     --stargazer-ts-resampled-outpath stargazers-rs.csv \
-    --fork-ts-resampled-outpath forks-rs.csv \
+    --fork-ts-resampled-outpath $BATS_TEST_TMPDIR/forks-rs.csv \
     --views-clones-aggregate-inpath tests/data/A/views_clones_aggregate.csv \
     --fork-ts-inpath=tests/data/A/forks.csv \
     --stargazer-ts-inpath=tests/data/A/stars.csv
   [ "$status" -eq 0 ]
   assert_exist $BATS_TEST_TMPDIR/outdir/report_for_pdf.html
+  assert_exist $BATS_TEST_TMPDIR/forks-rs.csv
 }
 
 @test "analyze.py: snapshots: some, vcagg: no, stars: some, forks: some" {
+  # A special property of tests/data/A/snapshots is:
+  # number of CSV files discovered for *_views_clones_series_fragment.csv: 0
   run python analyze.py owner/repo tests/data/A/snapshots \
     --resources-directory=resources \
     --fork-ts-resampled-outpath forks-rs.csv \
@@ -51,4 +55,20 @@ setup() {
   # assert_output
   assert_output --partial "unexpected: no data for views/clones"
   [ "$status" -eq 1 ]
+}
+
+@test "analyze.py + pdf.py: snapshots: some, vcagg: no, stars: some, forks: some" {
+  run python analyze.py owner/repo tests/data/A/snapshots \
+    --resources-directory=resources \
+    --output-directory $BATS_TEST_TMPDIR/outdir \
+    --outfile-prefix "" \
+    --stargazer-ts-resampled-outpath stargazers-rs.csv \
+    --views-clones-aggregate-inpath tests/data/A/views_clones_aggregate.csv \
+    --fork-ts-inpath=tests/data/A/forks.csv \
+    --stargazer-ts-inpath=tests/data/A/stars.csv
+  [ "$status" -eq 0 ]
+  assert_exist $BATS_TEST_TMPDIR/outdir/report_for_pdf.html
+
+  run python pdf.py $BATS_TEST_TMPDIR/outdir/report_for_pdf.html $BATS_TEST_TMPDIR/report.pdf
+  assert_exist $BATS_TEST_TMPDIR/report.pdf
 }

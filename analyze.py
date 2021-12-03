@@ -1178,7 +1178,7 @@ def add_stargazers_section(
 
     if date_axis_lim is not None:
         log.info("custom time window for stargazer plot: %s", date_axis_lim)
-        # x_kwargs["scale"] = alt.Scale(domain=date_axis_lim)
+        x_kwargs["scale"] = alt.Scale(domain=date_axis_lim)
 
     panel_props = {"height": 300, "width": "container", "padding": 10}
     chart = (

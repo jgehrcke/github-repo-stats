@@ -182,6 +182,29 @@ jobs:
           databranch: main
 ```
 
+## Developer instructions
+
+Here is how to run some sanity checks from within a fresh checkout:
+
+```bash
+$ git clone https://github.com/jgehrcke/github-repo-stats
+$ cd github-repo-stats/
+
+$ make clitests
+...
+1..5
+ok 1 analyze.py: snapshots: some, vcagg: yes, stars: some, forks: none
+ok 2 analyze.py: snapshots: some, vcagg: yes, stars: none, forks: some
+ok 3 analyze.py: snapshots: some, vcagg: yes, stars: some, forks: some
+ok 4 analyze.py: snapshots: some, vcagg: no, stars: some, forks: some
+ok 5 analyze.py + pdf.py: snapshots: some, vcagg: no, stars: some, forks: some
+
+$ make lint
+...
+All done! ✨ 🍰 ✨
+...
+```
+
 ## Further resources
 
 * [“GitHub Stars” -- useful for *what*?](https://opensource.stackexchange.com/questions/5110/github-stars-is-a-very-useful-metric-but-for-what/5114#5114)

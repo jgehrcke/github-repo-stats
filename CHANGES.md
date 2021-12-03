@@ -7,25 +7,25 @@ Thanks for all the feedback and contributions.
 Report improvements:
 
 * Automatically use semi-logarithmic plotting when it appears to make sense. This is supposed to help in cases of traffic spikes much higher than the baseline. (With linear plotting, the normal traffic level would then appear to be very close to zero, and variations around it would hardly be visible.)
-* Add data point tooltips as mouse hover effect in the HTML report (also see #28).
-* Display cumulative view/clone counts (total count until day of report generation, also see #31).
+* Add data point tooltips as mouse hover effect in the HTML report (also see [#28](https://github.com/jgehrcke/github-repo-stats/issues/28)).
+* Display cumulative view/clone counts (total count until day of report generation, also see [#31](https://github.com/jgehrcke/github-repo-stats/issues/31)).
 * Top referrer/path plots: move the legend so that these plots have the same width as all other plots, making comparison easier.
 * Synchronize date axes where it makes sense:
   * The plots for view/clone data now all show the same time window.
   * The plots for star/fork data always show the same time window.
   * The star/fork plots only show the same time window as the view/clone plots when data collection started at the time of or before the first star/fork event. Else, the star/fork plots go further into the past.
-* Create a meaningful fork/stargazer section for the special cases of zero forks/stars, respectively (also see #41, #43).
+* Create a meaningful fork/stargazer section for the special cases of zero forks/stars, respectively (also see [#41](https://github.com/jgehrcke/github-repo-stats/issues/41), [#43](https://github.com/jgehrcke/github-repo-stats/issues/43)).
 * Tweak plot style (marker size, tick label angle, and others).
 
 Job robustness and performance:
 
-* Perform a shallow clone of the data repository for faster job execution (#32, #34).
+* Perform a shallow clone of the data repository for faster job execution ([#32](https://github.com/jgehrcke/github-repo-stats/issues/32), [#34](https://github.com/jgehrcke/github-repo-stats/issues/34)).
 
 Bug fixes:
 
-* Fix a path/referrer snapshot time series aggregation bug where a significant fraction of the available data was not visualized (#36).
-* View/clone analysis: do not crash anymore when there is an aggregate file but no new snapshots (#37).
-* Fix `git pull` and `git push` errors for the first-run scenario where the data branch does not yet exist on the data repository (see #30, #33, #35).
+* Fix a path/referrer snapshot time series aggregation bug where a significant fraction of the available data was not visualized ([#36](https://github.com/jgehrcke/github-repo-stats/issues/36)).
+* View/clone analysis: do not crash anymore when there is an aggregate file but no new snapshots ([#37](https://github.com/jgehrcke/github-repo-stats/issues/37)).
+* Fix `git pull` and `git push` errors for the first-run scenario where the data branch does not yet exist on the data repository (see [#30](https://github.com/jgehrcke/github-repo-stats/issues/30), [#33](https://github.com/jgehrcke/github-repo-stats/issues/33), [#35](https://github.com/jgehrcke/github-repo-stats/issues/35)).
 
 Misc:
 

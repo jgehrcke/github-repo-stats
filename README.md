@@ -1,8 +1,16 @@
 # github-repo-stats
 
-A GitHub Action to periodically inspect a target repository and generate a report for it.
+A GitHub Action ([in Marketplace](https://github.com/marketplace/actions/github-repo-stats)) built to overcome the [14-day limitation](https://github.com/isaacs/github/issues/399) of GitHub's built-in traffic statistics.
 
-The primary purpose of this Action is to overcome the [14-day limitation](https://github.com/isaacs/github/issues/399) of GitHub's built-in traffic statistics.
+Start collecting data with this action **today!**
+
+Data that you don't collect today will be gone in two weeks from now.
+
+High-level method description:
+
+* This GitHub Action runs once per day. Each run yields a "snapshot" of repository traffic statistics (influenced by the past 14 days). Snapshots are persisted via git.
+* Each run performs data analysis on all individual snapshots and generates a report from the aggregate — covering an arbitrarily long time frame.
+
 
 ## Demo
 
@@ -24,7 +32,7 @@ The primary purpose of this Action is to overcome the [14-day limitation](https:
 * The HTML report can be served right away via GitHub pages (that is how the demo above works).
 * Careful data analysis: there are a number of traps ([example](https://github.com/jgehrcke/github-repo-stats/blob/5fefc527288995e2e7e35593db496451580f51db/analyze.py#L748)) when aggregating data based on what the GitHub Traffic API returns. This project tries to not fall for them. One goal of this project is to perform [advanced analysis](https://github.com/jgehrcke/github-repo-stats/blob/5fefc527288995e2e7e35593db496451580f51db/analyze.py#L478) where possible.
 
-**As of now, the report contains:**
+## Report content
 
 * Traffic stats:
   * Unique and total views per day
@@ -34,14 +42,25 @@ The primary purpose of this Action is to overcome the [14-day limitation](https:
 * Evolution of stargazers
 * Evolution of forks
 
+## Credits
+
+This walks on the shoulders of giants. Shoutout to
+
+* [Pandoc](https://pandoc.org/) for rendering HTML from Markdown.
+* [Altair](https://altair-viz.github.io/) and [Vega-Lite](https://vega.github.io/vega-lite/) for visualization.
+* [Pandas](https://pandas.pydata.org/) for data analysis.
+* The [CPython](https://www.python.org/) ecosystem which has always been fun for me to build software in.
+
 ## Documentation
 
-### Clarification: "stats repository" vs. "data repository"
+### Terminology: *stats repository* and *data repository*
 
 Naming is hard :-). Let's define two concepts and their names:
 
 * The *stats repository* is the repository to fetch stats for and to generate the report for.
 * The *data repository* is the repository to store data and report files in.
+
+Let me know if you can think of better names.
 
 These two repositories can be the same. But they don't have to be :-).
 
@@ -119,45 +138,46 @@ Extract from `action.yml`:
     default: none
 ```
 
-It's recommended that you create the data branch and delete all files from that branch before setting this Action up in your reposistory, so that this data branch appears as a tidy environment.
+It is recommended that you create the data branch and delete all files from that branch before setting this Action up in your reposistory, so that this data branch appears as a tidy environment.
 You can of course do that later, too.
 
-### Tracking multiple repos
-[Egil Hansen](https://github.com/egil) discovered an elegant hack for tracking stats on multiple repositories using a single workflow action:
+### Tracking multiple repositories via `matrix`
 
-_Example workflow for tracking multiple repositories:_
-```
-name: update-stats
-concurrency: 'update-stats'
+The GitHub Actions workflow specification language allows for defining a matrix of different job configurations through the [`jobs.<job_id>.strategy.matrix`](https://docs.github.com/en/actions/learn-github-actions/workflow-syntax-for-github-actions#jobsjob_idstrategymatrix) directive.
+This can be used for efficiently tracking multiple stats repositories from within the same data repository.
+
+_Example workflow file:_
+
+```yaml
+name: fetch-repository-stats
+concurrency: fetch-repository-stats
 
 on:
   schedule:
-    # Run this once per day, towards the end of the day for keeping the most
-    # recent data point most meaningful (hours are interpreted in UTC).
     - cron: "0 23 * * *"
-  workflow_dispatch: # Allow for running this manually.
+  workflow_dispatch:
 
 jobs:
-  update-stats:
+  run-ghrs-with-matrix:
     name: repostats-for-nice-projects
     runs-on: ubuntu-latest
     strategy:
       matrix:
+        # The repositories to generate reports for.
         statsRepo: ['bob/nice-project', 'alice/also-nice-project']
+      # Do not cancel&fail all remaining jobs upon first job failure.
       fail-fast: false
-      # Using 1 to help avoid commit conflicts
+      # Help avoid commit conflicts. Note(JP): this should not be
+      # necessary anymore, feedback appreciated
       max-parallel: 1
     steps:
       - name: run-ghrs
-        uses: jgehrcke/github-repo-stats@v1.1.0
+        uses: jgehrcke/github-repo-stats@v1.2.0
         with:
-          # Define the stats repositories (the repos to fetch
-          # stats for and to generate the reports for).
+          # Repo to fetch stats for and to generate the report for.
           repository: ${{ matrix.statsRepo }}
-          # Set a GitHub API token that can read the stats
-          # repository, and that can push to the data
-          # repository (which this workflow file lives in),
-          # to store data and the report files.
+          # Token that can read the stats repository and that
+          # can push to the data repository.
           ghtoken: ${{ secrets.ghrs_github_api_token }}
           # Data branch: Branch to push data to (in the data repo).
           databranch: main

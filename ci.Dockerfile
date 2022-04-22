@@ -23,6 +23,18 @@ RUN stat /bats-libraries/bats-assert/load.bash
 # Expect `bats` to work.
 RUN bats --help
 
+# Pre-create /.wdm directory and provide wide access to all unix users
+# # 220422-15:33:16.426 INFO: Trying to download new driver from https://chromedriver.storage.googleapis.com/96.0.4664.45/chromedriver_linux64.zip
+#   Traceback (most recent call last):
+# ...
+#     File "/cwd/pdf.py", line 83, in gen_pdf_bytes
+#       ChromeDriverManager().install(), options=wd_options
+# ...
+#     File "/usr/local/lib/python3.10/os.py", line 225, in makedirs
+#       mkdir(name, mode)
+#   PermissionError: [Errno 13] Permission denied: '/.wdm'
+RUN mkdir -p /.wdm && chmod ugo+rwx /.wdm
+
 # This is also where the current checkout will be mounted to.
 RUN mkdir -p /checkout
 WORKDIR /checkout

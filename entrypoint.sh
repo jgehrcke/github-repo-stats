@@ -150,7 +150,9 @@ git add ghrs-data/snapshots
 git commit -m "ghrs: vc agg ${UPDATE_ID} for ${STATS_REPOSPEC}" || echo "commit failed, ignore (continue)"
 
 # Commit the updated stargazer / fork. Do not error out if nothing changed.
-git add ghrs-data/forks.csv ghrs-data/stargazers.csv
+# Note that either of ghrs-data/forks.csv or ghrs-data/stargazers.csv may
+# be missing
+git add ghrs-data/forks.csv ghrs-data/stargazers.csv || echo "git add failed, ignore (continue)"
 git commit -m "ghrs: stars and forks ${UPDATE_ID} for ${STATS_REPOSPEC}" || echo "commit failed, ignore  (continue)"
 
 echo "Translate HTML report into PDF, via headless Chrome"

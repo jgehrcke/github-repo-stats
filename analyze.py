@@ -1517,27 +1517,29 @@ def parse_args():
         "--stargazer-ts-resampled-outpath",
         default="",
         metavar="PATH",
-        help="Write resampled stargazer time series to CSV file (at most one sample per day)",
+        help="Write resampled stargazer time series to CSV file (at most "
+        "one sample per day). No file is created if time series is empty.",
     )
     parser.add_argument(
         "--stargazer-ts-inpath",
         default="",
         metavar="PATH",
-        help="Read raw stargazer time series from CSV file",
+        help="Read raw stargazer time series from CSV file. File must exist, may be empty.",
     )
 
     parser.add_argument(
         "--fork-ts-resampled-outpath",
         default="",
         metavar="PATH",
-        help="Write resampled fork time series to CSV file (at most one sample per day)",
+        help="Write resampled fork time series to CSV file (at most "
+        "one sample per day). No file is created if time series is empty.",
     )
 
     parser.add_argument(
         "--fork-ts-inpath",
         default="",
         metavar="PATH",
-        help="Read raw fork time series from CSV file",
+        help="Read raw fork time series from CSV file. File must exist, may be empty.",
     )
 
     parser.add_argument(

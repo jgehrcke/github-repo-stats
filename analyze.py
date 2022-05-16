@@ -574,7 +574,7 @@ def analyse_top_x_snapshots(entity_type, date_axis_lim):
     #     ], axis=1))
     # sys.exit()
 
-    top_n = 10
+    top_n = 7
     top_n_enames = list(sorted_dict.keys())[:top_n]
 
     # Build individual views_unique over time series. These series might have

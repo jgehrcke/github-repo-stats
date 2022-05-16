@@ -598,7 +598,40 @@ def analyse_top_x_snapshots(entity_type, date_axis_lim):
         entity_type,
         df_top_vu,
     )
-    # sys.exit()
+
+    n_datapoints = df_top_vu.shape[0] * df_top_vu.shape[1]
+    if n_datapoints > 3000:
+        log.info("df_top_vu has %s data points in total, downsample", n_datapoints)
+        # min_count: "The required number of valid values to perform the operation.
+        # If fewer than min_count non-NA values are present the result will be NA."
+        # df_top_vu = df_top_vu.resample("3d").sum(min_count=1)
+        # I had seen the mean value introduce a bunch of .3333, it's fine to round
+        # them to two digits so that the JSON doc (below) does not contain largish
+        # floats.
+        # df_top_vu = df_top_vu.resample("5d", label="right").mean().round(decimals=2)
+        # df_top_vu = df_top_vu.resample("5d").mean().round(decimals=2)
+        # Each data point reflects the last 14 days. Taking the mean() for e.g. 5
+        # of these creates a mean value of mean values. I think we can just drop
+        # values, take the last one.
+        # df_top_vu = df_top_vu.resample("5d", label="right", closed="right").last(
+
+        # The outcommented linkes above show the experimentation leading up to
+        # the following method. This following method effectively downsamples
+        # by throwing away data points if there is more than one data point per
+        # five days. In that case it uses the last one (the others are
+        # dropped). That is, we do not build a mean of means, but simply pick
+        # one of the means. The `origin="end"` argument aligns the resampler
+        # bins so that the largest timestamp in the input ends up being the
+        # "end of the bins", so that the newest/right-most data point in the
+        # resulting graph has the same date as the newest data point.
+        # Otherwise, it might go into the future (this is a cosmetic aspect,
+        # though). Also see
+        # https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.resample.html
+        df_top_vu = df_top_vu.resample("5d", origin="end").last(min_count=1)
+        log.info(
+            "after downsample:\n%s",
+            df_top_vu,
+        )
 
     # For plotting with Altair, reshape the data using pd.melt() to combine the
     # multiple columns into one, where the referrer name is not a column label,
@@ -616,6 +649,22 @@ def analyse_top_x_snapshots(entity_type, date_axis_lim):
     # Normalize main metric to show a view count _per day_, and clarify in the
     # plot that this is a _mean_ value derived from the _last 14 days_.
     df_melted["views_unique_norm"] = df_melted["views_unique"] / 14.0
+
+    # See issue #52, chart.to_json() below did warn us when the df_melted got a
+    # little too big. In a test case with daily data for more than a year a
+    # top_n reduction from 10 to 7 reduced the row count from 5010 to 3507. I
+    # think this makes sense, plotting data for top 10 was a tiny bit too busy
+    # anyway I think. However, most of the reduction should come from
+    # down-sampling (prior to plotting) to one sample per week or maybe to one
+    # sample per three days instead of one per day. That's why above there is a
+    # downsampling step. In the specific scenario described before, this
+    # further reduced the number of rows from 3507 to 728.
+    log.info("melted df shape: %s", df_melted.shape)
+
+    if len(df_melted) > 5000:
+        log.warning(
+            "df_melted has more than 5000 rows -- think about reducing the data points to plot"
+        )
 
     y_axis_scale_type = symlog_or_lin(df_melted, "views_unique_norm", 8)
 

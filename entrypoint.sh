@@ -45,13 +45,22 @@ git ls-remote --exit-code --heads https://ghactions:${GHRS_GITHUB_API_TOKEN}@git
 LS_ECODE=$?
 set -e
 if [ $LS_ECODE -eq 2 ]; then
-    # DATA_BRANCH_NAME branch doesn't exist. Do full clone and create branch.
+    # expected failure: DATA_BRANCH_NAME branch doesn't exist (yet).
+    # Do full clone and create branch.
+    echo "data branch $DATA_BRANCH_NAME does not exist, do full clone"
     git clone https://ghactions:${GHRS_GITHUB_API_TOKEN}@github.com/${DATA_REPOSPEC}.git .
+    # note that the above fails with
+    #  fatal: destination path '.' already exists and is not an empty directory.
+    # if this is run locally in a non-empty dir
     git remote set-url origin https://ghactions:${GHRS_GITHUB_API_TOKEN}@github.com/${DATA_REPOSPEC}.git
     git checkout -b "${DATA_BRANCH_NAME}"
-else
-    # DATA_BRANCH_NAME branch exists
+elif [ $LS_ECODE -eq 0 ]; then
+    # DATA_BRANCH_NAME branch exists. Perform shallow clone.
     git clone --single-branch --branch "${DATA_BRANCH_NAME}" https://ghactions:${GHRS_GITHUB_API_TOKEN}@github.com/${DATA_REPOSPEC}.git .
+else
+    # unexpected failure
+    echo "git ls-remote failed unexpectedly with code $LS_ECODE"
+    exit 1
 fi
 
 git config --local user.email "action@github.com"

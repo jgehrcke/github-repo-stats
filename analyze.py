@@ -48,6 +48,8 @@ logging.basicConfig(
     datefmt="%y%m%d-%H:%M:%S",
 )
 
+# Also see https://github.com/jgehrcke/github-repo-stats/issues/52
+alt.data_transformers.disable_max_rows()
 
 NOW = datetime.utcnow()
 TODAY = NOW.strftime("%Y-%m-%d")

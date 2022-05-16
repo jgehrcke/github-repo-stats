@@ -21,6 +21,32 @@ jobs:
         run: make lint
       - name: test main Dockerfile (builds jgehrcke/github-repo-stats:local)
         run: make action-image
+      - name: test entrypoint.sh in action container
+        env:
+          INPUT_GHTOKEN: ${{ secrets.ghrs_github_api_token }}
+          GITHUB_REPOSITORY: jgehrcke/ghrs-test
+          INPUT_DATABRANCH: databranch-test
+          INPUT_REPOSITORY: jgehrcke/github-repo-stats
+          PATH_GHRS_ROOT: /
+          GHRS_TESTING: true
+          INPUT_GHPAGESPREFIX: none
+          GITHUB_WORKFLOW: localtesting
+        run: |
+          docker run \
+            --entrypoint "/bin/bash" \
+            -e INPUT_GHTOKEN \
+            -e GITHUB_REPOSITORY \
+            -e INPUT_DATABRANCH \
+            -e INPUT_REPOSITORY \
+            -e PATH_GHRS_ROOT \
+            -e GHRS_TESTING \
+            -e INPUT_GHPAGESPREFIX \
+            -e GITHUB_WORKFLOW \
+            -v $(pwd):/cwd \
+            jgehrcke/github-repo-stats:local -c \
+            'set -o errexit && mkdir /tmp/testrun && cd /tmp/testrun &&
+              bash /cwd/entrypoint.sh
+            '
       - name: test fetch.py in action container
         env:
           GHRS_GITHUB_API_TOKEN: ${{ secrets.ghrs_github_api_token }}

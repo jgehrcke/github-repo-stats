@@ -12,9 +12,9 @@ echo "GHRS entrypoint.sh: pwd: $(pwd)"
 RNDSTR=$(python -c 'import uuid; print(uuid.uuid4().hex.upper()[0:4])')
 UPDATE_ID="$(date +"%m-%d-%H%M" --utc)-${RNDSTR}"
 
-PATHFETCHPY="${PATHFETCHPY:-/fetch.py}"
-PATHANALYZEPY="${PATHANALYZEPY:-/analyze.py}"
-PATHAPDFPY="${PATHAPDFPY:-/pdf.py}"
+# For testing purposes, allow for overriding the path to the root of the
+# GHRS repo. Default to /. Expected: /fetch.py, /analyze.py, etc.
+PATH_GHRS_ROOT="${PATH_GHRS_ROOT:-/}"
 
 # "When you specify an input to an action in a workflow file or use a default
 # input value, GitHub creates an environment variable for the input with the
@@ -119,7 +119,7 @@ set +e
 # Note that the *-raw.csv files contain each star/fork event. These files do
 # for now not need to be in the repository (but it will make sense to store
 # them there once addressing the 10k star problem).
-python "$PATHFETCHPY" "${STATS_REPOSPEC}" \
+python "${PATH_GHRS_ROOT}/fetch.py" "${STATS_REPOSPEC}" \
     --snapshot-directory=newsnapshots \
     --fork-ts-outpath=forks-raw.csv \
     --stargazer-ts-outpath=stars-raw.csv
@@ -160,8 +160,8 @@ sleep 1
 echo "Parse data files, perform aggregation and analysis, generate Markdown report and render as HTML"
 set -x
 set +e
-python "$PATHANALYZEPY" \
-    --resources-directory /resources \
+python "${PATH_GHRS_ROOT}/analyze.py" \
+    --resources-directory "${PATH_GHRS_ROOT}/resources" \
     --output-directory latest-report \
     --outfile-prefix "" \
     --stargazer-ts-inpath "stars-raw.csv" \
@@ -196,7 +196,7 @@ git add ghrs-data/forks.csv ghrs-data/stargazers.csv || echo "git add failed, ig
 git commit -m "ghrs: stars and forks ${UPDATE_ID} for ${STATS_REPOSPEC}" || echo "commit failed, ignore  (continue)"
 
 echo "Translate HTML report into PDF, via headless Chrome"
-python /pdf.py latest-report/report_for_pdf.html latest-report/report.pdf
+python "${PATH_GHRS_ROOT}/pdf.py" latest-report/report_for_pdf.html latest-report/report.pdf
 
 # Add directory contents (markdown, HTML, PDF).
 git add latest-report

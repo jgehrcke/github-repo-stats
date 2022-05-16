@@ -25,7 +25,7 @@ jobs:
         env:
           INPUT_GHTOKEN: ${{ secrets.ghrs_github_api_token }}
           GITHUB_REPOSITORY: jgehrcke/ghrs-test
-          INPUT_DATABRANCH: databranch-test
+          INPUT_DATABRANCH: github-repo-stats
           INPUT_REPOSITORY: jgehrcke/github-repo-stats
           PATH_GHRS_ROOT: /
           GHRS_TESTING: true

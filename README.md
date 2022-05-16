@@ -113,29 +113,21 @@ You can create such a personal access token under [github.com/settings/tokens](h
 
 ### Input parameter reference
 
-Extract from `action.yml`:
+In the workflow file you can use a number of configuration parameters. They
+are specified and documented in the action.yml file (the reference). Here
+is a copy for convenience:
 
-```yaml
-  repository:
-    description: >
-      Repository spec (<owner-or-org>/<reponame>) for the repository to fetch
-      statistics for.
-    default: ${{ github.repository }}
-  ghtoken:
-    description: >
-      GitHub API token for reading repo stats and for interacting with the data
-      repo (must be set if repo to fetch stats for is not the data repo).
-    default: ${{ github.token }}
-  databranch:
-    description: >
-      Data branch: Branch to push data to (in the data repo).
-    default: github-repo-stats
-  ghpagesprefix:
-    description: >
-      Set this if the data branch in the data repo is exposed via GitHub pages.
-      Must not end with a slash. Example: https://jgehrcke.github.io/ghrs-test
-    default: none
-```
+* `repository`: Repository spec (`<owner-or-org>/<reponame>`) for the repository
+  to fetch statistics for. Ddefault: `${{ github.repository }}`
+* `ghtoken`: GitHub API token for reading repo stats and for interacting with
+  the data repo (must be set if repo to fetch stats for is not the data repo).
+  Default: `${{ github.token }}`
+* `databranch`: Branch to push data to (in the data repo).
+  Default: `github-repo-stats`
+* `ghpagesprefix`: Set this if the data branch in the data repo is exposed via
+  GitHub pages. Must not end with a slash.
+  Example: `https://jgehrcke.github.io/ghrs-test`
+  Default: none
 
 It is recommended that you create the data branch and delete all files from that branch before setting this Action up in your reposistory, so that this data branch appears as a tidy environment.
 You can of course do that later, too.

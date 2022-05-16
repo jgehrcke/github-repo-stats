@@ -178,6 +178,8 @@ jobs:
 
 ## Developer instructions
 
+### clitests
+
 Here is how to run some sanity checks from within a fresh checkout:
 
 ```bash
@@ -197,6 +199,28 @@ $ make lint
 ...
 All done! ✨ 🍰 ✨
 ...
+```
+
+### local testing of entrypoint.sh
+
+Set environment variables, example:
+
+```text
+export GITHUB_REPOSITORY=jgehrcke/ghrs-test
+export INPUT_DATABRANCH=databranch-test
+export INPUT_GHTOKEN="c***1"
+export INPUT_REPOSITORY=jgehrcke/covid-19-germany-gae
+export PATH_GHRS_ROOT="/home/jp/dev/github-repo-stats"
+export GHRS_TESTING="true"
+export INPUT_GHPAGESPREFIX="none"
+export GITHUB_WORKFLOW="localtesting"
+```
+
+Run in empty directory. Example:
+
+```bash
+$ cd /tmp/ghrstest
+$ rm -rf .* *; bash /home/jp/dev/github-repo-stats/entrypoint.sh
 ```
 
 ## Further resources

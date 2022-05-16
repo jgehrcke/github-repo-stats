@@ -12,6 +12,9 @@ echo "GHRS entrypoint.sh: pwd: $(pwd)"
 RNDSTR=$(python -c 'import uuid; print(uuid.uuid4().hex.upper()[0:4])')
 UPDATE_ID="$(date +"%m-%d-%H%M" --utc)-${RNDSTR}"
 
+PATHFETCHPY="${PATHFETCHPY:-/fetch.py}"
+PATHANALYZEPY="${PATHANALYZEPY:-/analyze.py}"
+PATHAPDFPY="${PATHAPDFPY:-/pdf.py}"
 
 # "When you specify an input to an action in a workflow file or use a default
 # input value, GitHub creates an environment variable for the input with the
@@ -24,7 +27,10 @@ UPDATE_ID="$(date +"%m-%d-%H%M" --utc)-${RNDSTR}"
 # This is the repository to fetch data for.
 STATS_REPOSPEC="${INPUT_REPOSITORY}"
 
-# This is the repository to store data and reports in.
+# DATA_REPOSPEC is the repository to store data and reports in.
+# GITHUB_REPOSITORY is an environment variable specifying the repository this
+# action runs in. The repository this action runs in is (for now at least)
+# by definition the data repository.
 DATA_REPOSPEC="${GITHUB_REPOSITORY}"
 
 # This is the API token used to fetch data (for the repo of interest) and
@@ -99,7 +105,7 @@ cd "${STATS_REPOSPEC}"
 
 echo "operating in $(pwd)"
 
-mkdir newsnapshots
+mkdir -p newsnapshots
 echo "fetch.py for ${STATS_REPOSPEC}"
 
 # Have CPython emit its stderr data immediately to the attached streams to
@@ -113,7 +119,7 @@ set +e
 # Note that the *-raw.csv files contain each star/fork event. These files do
 # for now not need to be in the repository (but it will make sense to store
 # them there once addressing the 10k star problem).
-python /fetch.py "${STATS_REPOSPEC}" \
+python "$PATHFETCHPY" "${STATS_REPOSPEC}" \
     --snapshot-directory=newsnapshots \
     --fork-ts-outpath=forks-raw.csv \
     --stargazer-ts-outpath=stars-raw.csv
@@ -154,7 +160,7 @@ sleep 1
 echo "Parse data files, perform aggregation and analysis, generate Markdown report and render as HTML"
 set -x
 set +e
-python /analyze.py \
+python "$PATHANALYZEPY" \
     --resources-directory /resources \
     --output-directory latest-report \
     --outfile-prefix "" \
@@ -225,6 +231,12 @@ set -x
 git add README.md
 git commit -m "ghrs: report ${UPDATE_ID} for ${STATS_REPOSPEC}"
 set +x
+
+if [ -z ${GHRS_TESTING+x} ]; then
+    echo "GHRS_TESTING is unset"
+else
+    echo "GHRS_TESTING is set. terminate before push/pull loop"
+fi
 
 # Now, push the changes to the remote branch. Note that there might have been
 # other jobs running, pushing to the same branch in the meantime. In that case,

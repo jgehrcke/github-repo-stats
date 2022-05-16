@@ -236,6 +236,7 @@ if [ -z ${GHRS_TESTING+x} ]; then
     echo "GHRS_TESTING is unset"
 else
     echo "GHRS_TESTING is set. terminate before push/pull loop"
+    exit 0
 fi
 
 # Now, push the changes to the remote branch. Note that there might have been

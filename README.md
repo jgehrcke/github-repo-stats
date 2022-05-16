@@ -57,7 +57,7 @@ This walks on the shoulders of giants. Shoutout to
 Naming is hard :-). Let's define two concepts and their names:
 
 * The *stats repository* is the repository to fetch stats for and to generate the report for.
-* The *data repository* is the repository to store data and report files in.
+* The *data repository* is the repository to store data and report files in. This is also the repository where this Action runs in.
 
 Let me know if you can think of better names.
 
@@ -132,7 +132,7 @@ is a copy for convenience:
   Default: none
 
 It is recommended that you create the data branch and delete all files from that branch before setting this Action up in your reposistory, so that this data branch appears as a tidy environment.
-You can of course do that later, too.
+You can of course remove files from that branch at any other point in time, too.
 
 ### Tracking multiple repositories via `matrix`
 

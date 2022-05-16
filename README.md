@@ -14,11 +14,11 @@ High-level method description:
 ## Demo
 
 * Report:
-  * [HTML report](https://jgehrcke.github.io/ghrs-test/jgehrcke/covid-19-germany-gae/latest-report/report.html)
-  * [PDF report](https://jgehrcke.github.io/ghrs-test/jgehrcke/covid-19-germany-gae/latest-report/report.pdf)
+  * [HTML report](https://jgehrcke.github.io/ghrs-test/jgehrcke/github-repo-stats/latest-report/report.html)
+  * [PDF report](https://jgehrcke.github.io/ghrs-test/jgehrcke/github-repo-stats/latest-report/report.pdf)
 * Action setup (how the above's report is generated):
   * [Workflow file](https://github.com/jgehrcke/ghrs-test/blob/github-repo-stats/.github/workflows/github-repo-stats.yml)
-  * [Data branch](https://github.com/jgehrcke/ghrs-test/tree/github-repo-stats/jgehrcke/covid-19-germany-gae)
+  * [Data branch](https://github.com/jgehrcke/ghrs-test/tree/github-repo-stats/jgehrcke/github-repo-stats)
 
 ## Highlights
 

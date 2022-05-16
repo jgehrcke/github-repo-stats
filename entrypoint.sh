@@ -33,6 +33,13 @@ STATS_REPOSPEC="${INPUT_REPOSITORY}"
 # by definition the data repository.
 DATA_REPOSPEC="${GITHUB_REPOSITORY}"
 
+# For testing purposes: when run in a real GitHub Action then GITHUB_REPOSITORY
+# cannot be set manually.
+if [[ ${GH_REPOSITORY_OVERRIDE} ]]; then
+    echo "GH_REPOSITORY_OVERRIDE is set, ignore GITHUB_REPOSITORY"
+    DATA_REPOSPEC=${GH_REPOSITORY_OVERRIDE}
+fi
+
 # This is the API token used to fetch data (for the repo of interest) and
 # to interact with the data repository.
 export GHRS_GITHUB_API_TOKEN="${INPUT_GHTOKEN}"
@@ -42,6 +49,8 @@ DATA_BRANCH_NAME="${INPUT_DATABRANCH}"
 
 # For debugging, let's be sure that the GHRS_GITHUB_API_TOKEN is non-empty.
 echo "length of API TOKEN: ${#GHRS_GITHUB_API_TOKEN}"
+echo "STATS_REPOSPEC: $STATS_REPOSPEC"
+echo "DATA_REPOSPEC: $DATA_REPOSPEC"
 
 if [ -d ".git" ]; then
     echo "there is a .git dir in cwd. is that a data repo checkout? an accident? terminate."

@@ -24,7 +24,7 @@ jobs:
       - name: test entrypoint.sh in action container
         env:
           INPUT_GHTOKEN: ${{ secrets.ghrs_github_api_token }}
-          GITHUB_REPOSITORY: jgehrcke/ghrs-test
+          GH_REPOSITORY_OVERRIDE: jgehrcke/ghrs-test
           INPUT_DATABRANCH: github-repo-stats
           INPUT_REPOSITORY: jgehrcke/github-repo-stats
           PATH_GHRS_ROOT: /
@@ -36,6 +36,7 @@ jobs:
             --entrypoint "/bin/bash" \
             -e INPUT_GHTOKEN \
             -e GITHUB_REPOSITORY \
+            -e GH_REPOSITORY_OVERRIDE \
             -e INPUT_DATABRANCH \
             -e INPUT_REPOSITORY \
             -e PATH_GHRS_ROOT \

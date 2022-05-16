@@ -37,32 +37,57 @@ DATA_BRANCH_NAME="${INPUT_DATABRANCH}"
 # For debugging, let's be sure that the GHRS_GITHUB_API_TOKEN is non-empty.
 echo "length of API TOKEN: ${#GHRS_GITHUB_API_TOKEN}"
 
-set -x
-set +e
-# Check out data branch only if it exists. To minimize overhead, also see
-# https://stackoverflow.com/a/4568323/145400.
-git ls-remote --exit-code --heads https://ghactions:${GHRS_GITHUB_API_TOKEN}@github.com/${DATA_REPOSPEC}.git "${DATA_BRANCH_NAME}"
-LS_ECODE=$?
-set -e
-if [ $LS_ECODE -eq 2 ]; then
-    # expected failure: DATA_BRANCH_NAME branch doesn't exist (yet).
-    # Do full clone and create branch.
-    echo "data branch $DATA_BRANCH_NAME does not exist, do full clone"
-    git clone https://ghactions:${GHRS_GITHUB_API_TOKEN}@github.com/${DATA_REPOSPEC}.git .
-    # note that the above fails with
-    #  fatal: destination path '.' already exists and is not an empty directory.
-    # if this is run locally in a non-empty dir
-    git remote set-url origin https://ghactions:${GHRS_GITHUB_API_TOKEN}@github.com/${DATA_REPOSPEC}.git
-    git checkout -b "${DATA_BRANCH_NAME}"
-elif [ $LS_ECODE -eq 0 ]; then
-    # DATA_BRANCH_NAME branch exists. Perform shallow clone.
-    git clone --single-branch --branch "${DATA_BRANCH_NAME}" https://ghactions:${GHRS_GITHUB_API_TOKEN}@github.com/${DATA_REPOSPEC}.git .
-else
-    # unexpected failure
-    echo "git ls-remote failed unexpectedly with code $LS_ECODE"
+if [ -d ".git" ]; then
+    echo "there is a .git dir in cwd. is that a data repo checkout? an accident? terminate."
     exit 1
 fi
 
+if [ -z ${GHRS_TESTING_DATA_REPO_DIR+x} ]; then
+    echo "GHRS_TESTING_DATA_REPO_DIR is unset"
+else
+    echo "GHRS_TESTING_DATA_REPO_DIR is set to '$GHRS_TESTING_DATA_REPO_DIR'"
+    if [ ! -d "$GHRS_TESTING_DATA_REPO_DIR"/.git ]; then
+        echo "does not appear to be a git repo. terminate."
+        exit 1
+    fi
+    # copy contents, including dotfiles: https://superuser.com/a/367303
+    cp -r "$GHRS_TESTING_DATA_REPO_DIR"/. .
+fi
+
+if [ ! -d ".git" ]; then
+    echo "fetch from remote"
+    set -x
+    set +e
+    # Check out data branch only if it exists. To minimize overhead, also see
+    # https://stackoverflow.com/a/4568323/145400.
+    git ls-remote --exit-code --heads https://ghactions:${GHRS_GITHUB_API_TOKEN}@github.com/${DATA_REPOSPEC}.git "${DATA_BRANCH_NAME}"
+    LS_ECODE=$?
+    set -e
+    if [ $LS_ECODE -eq 2 ]; then
+        # expected failure: DATA_BRANCH_NAME branch doesn't exist (yet).
+        # Do full clone and create branch.
+        echo "data branch $DATA_BRANCH_NAME does not exist, do full clone"
+        git clone https://ghactions:${GHRS_GITHUB_API_TOKEN}@github.com/${DATA_REPOSPEC}.git .
+        # note that the above fails with
+        #  fatal: destination path '.' already exists and is not an empty directory.
+        # if this is run locally in a non-empty dir
+        git remote set-url origin https://ghactions:${GHRS_GITHUB_API_TOKEN}@github.com/${DATA_REPOSPEC}.git
+        git checkout -b "${DATA_BRANCH_NAME}"
+    elif [ $LS_ECODE -eq 0 ]; then
+        # DATA_BRANCH_NAME branch exists. Perform shallow clone.
+        git clone --single-branch --branch "${DATA_BRANCH_NAME}" https://ghactions:${GHRS_GITHUB_API_TOKEN}@github.com/${DATA_REPOSPEC}.git .
+    else
+        # unexpected failure of git ls-remote
+        echo "git ls-remote failed unexpectedly with code $LS_ECODE"
+        exit 1
+    fi
+    set +x
+else
+    echo ".git repo is present, treat current dir as correct data repo checkout"
+fi
+
+
+set -x
 git config --local user.email "action@github.com"
 git config --local user.name "GitHub Action"
 

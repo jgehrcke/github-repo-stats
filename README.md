@@ -65,7 +65,7 @@ These two repositories can be the same. But they don't have to be :-).
 
 That is, you can for example set up this Action in a private repository but have it observe a public repository.
 
-### Setup
+### Setup (tutorial)
 
 Example scenario:
 
@@ -90,7 +90,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: run-ghrs
-        uses: jgehrcke/github-repo-stats@v1.1.0
+        uses: jgehrcke/github-repo-stats@v1.3.0
         with:
           # Define the stats repository (the repo to fetch
           # stats for and to generate the report for).
@@ -100,7 +100,9 @@ jobs:
           # Set a GitHub API token that can read the stats
           # repository, and that can push to the data
           # repository (which this workflow file lives in),
-          # to store data and the report files.
+          # to store data and the report files. This is
+          # not needed when the stats repository and the
+          # data repository are the same.
           ghtoken: ${{ secrets.ghrs_github_api_token }}
 
 ```

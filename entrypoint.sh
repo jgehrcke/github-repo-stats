@@ -47,16 +47,18 @@ export GHRS_GITHUB_API_TOKEN="${INPUT_GHTOKEN}"
 # The name of the branch in the data repository.
 DATA_BRANCH_NAME="${INPUT_DATABRANCH}"
 
-# For debugging, let's be sure that the GHRS_GITHUB_API_TOKEN is non-empty.
+# for diagnosis
 echo "length of API TOKEN: ${#GHRS_GITHUB_API_TOKEN}"
 echo "STATS_REPOSPEC: $STATS_REPOSPEC"
 echo "DATA_REPOSPEC: $DATA_REPOSPEC"
+echo "UPDATE_ID: $UPDATE_ID"
 
 if [ -d ".git" ]; then
     echo "there is a .git dir in cwd. is that a data repo checkout? an accident? terminate."
     exit 1
 fi
 
+# allow using local copy of data repo for local testing.
 if [ -z ${GHRS_TESTING_DATA_REPO_DIR+x} ]; then
     echo "GHRS_TESTING_DATA_REPO_DIR is unset"
 else
@@ -70,33 +72,37 @@ else
 fi
 
 if [ ! -d ".git" ]; then
-    echo "fetch from remote"
-    set -x
+    echo "fetch data repo from remote"
     set +e
     # Check out data branch only if it exists. To minimize overhead, also see
     # https://stackoverflow.com/a/4568323/145400.
+    set -x
     git ls-remote --exit-code --heads https://ghactions:${GHRS_GITHUB_API_TOKEN}@github.com/${DATA_REPOSPEC}.git "${DATA_BRANCH_NAME}"
+    set +x
     LS_ECODE=$?
     set -e
     if [ $LS_ECODE -eq 2 ]; then
         # expected failure: DATA_BRANCH_NAME branch doesn't exist (yet).
         # Do full clone and create branch.
         echo "data branch $DATA_BRANCH_NAME does not exist, do full clone"
+        set -x
         git clone https://ghactions:${GHRS_GITHUB_API_TOKEN}@github.com/${DATA_REPOSPEC}.git .
         # note that the above fails with
         #  fatal: destination path '.' already exists and is not an empty directory.
         # if this is run locally in a non-empty dir
         git remote set-url origin https://ghactions:${GHRS_GITHUB_API_TOKEN}@github.com/${DATA_REPOSPEC}.git
         git checkout -b "${DATA_BRANCH_NAME}"
+        set +x
     elif [ $LS_ECODE -eq 0 ]; then
         # DATA_BRANCH_NAME branch exists. Perform shallow clone.
+        set -x
         git clone --single-branch --branch "${DATA_BRANCH_NAME}" https://ghactions:${GHRS_GITHUB_API_TOKEN}@github.com/${DATA_REPOSPEC}.git .
+        set +x
     else
         # unexpected failure of git ls-remote
         echo "git ls-remote failed unexpectedly with code $LS_ECODE"
         exit 1
     fi
-    set +x
 else
     echo ".git repo is present, treat current dir as correct data repo checkout"
 fi
@@ -105,6 +111,7 @@ fi
 set -x
 git config --local user.email "action@github.com"
 git config --local user.name "GitHub Action"
+set +x
 
 # Do not write to the root of the repository, but to a directory named after
 # the stats respository (owner/repo). So that this data repository can be used
@@ -128,14 +135,15 @@ set +e
 # Note that the *-raw.csv files contain each star/fork event. These files do
 # for now not need to be in the repository (but it will make sense to store
 # them there once addressing the 10k star problem).
+set -x
 python "${GHRS_FILES_ROOT_PATH}/fetch.py" "${STATS_REPOSPEC}" \
     --snapshot-directory=newsnapshots \
     --fork-ts-outpath=forks-raw.csv \
     --stargazer-ts-outpath=stars-raw.csv
 FETCH_ECODE=$?
+set +x
 set -e
 
-set +x
 if [ $FETCH_ECODE -ne 0 ]; then
     # Try to work around sluggish stderr/out interleaving in GH Action's log
     # viewer, give CPython's stderr emitted above a little time to be captured
@@ -167,8 +175,8 @@ set +x
 sleep 1
 
 echo "Parse data files, perform aggregation and analysis, generate Markdown report and render as HTML"
-set -x
 set +e
+set -x
 python "${GHRS_FILES_ROOT_PATH}/analyze.py" \
     --resources-directory "${GHRS_FILES_ROOT_PATH}/resources" \
     --output-directory latest-report \
@@ -182,9 +190,9 @@ python "${GHRS_FILES_ROOT_PATH}/analyze.py" \
     --delete-ts-fragments \
     "${STATS_REPOSPEC}" ghrs-data/snapshots
 ANALYZE_ECODE=$?
+set +x
 set -e
 
-set +x
 if [ $ANALYZE_ECODE -ne 0 ]; then
     echo "error: analyze.py returned with code ${ANALYZE_ECODE} -- exit."
     exit $ANALYZE_ECODE
@@ -209,8 +217,8 @@ python "${GHRS_FILES_ROOT_PATH}/pdf.py" latest-report/report_for_pdf.html latest
 
 # Add directory contents (markdown, HTML, PDF).
 git add latest-report
-
 set +x
+
 echo "generate README.md"
 cat << EOF > README.md
 ## github-repo-stats for ${STATS_REPOSPEC}

@@ -35,8 +35,13 @@ DATA_REPOSPEC="${GITHUB_REPOSITORY}"
 
 # For local testing purposes: when run in a real GitHub Action then
 # GITHUB_REPOSITORY cannot be set manually.
-if [[ ${GHRS_DATA_REPOSPEC_OVERRIDE} ]]; then
-    echo "GHRS_DATA_REPOSPEC_OVERRIDE is set, ignore GITHUB_REPOSITORY"
+
+# allow using local copy of data repo for local testing.
+if [ -z ${GHRS_DATA_REPOSPEC_OVERRIDE+x} ]; then
+    echo "GHRS_DATA_REPOSPEC_OVERRIDE: not set"
+else
+    echo "GHRS_DATA_REPOSPEC_OVERRIDE set to '$GHRS_DATA_REPOSPEC_OVERRIDE'"
+    echo "ignore GITHUB_REPOSITORY '$GITHUB_REPOSITORY'"
     DATA_REPOSPEC=${GHRS_DATA_REPOSPEC_OVERRIDE}
 fi
 

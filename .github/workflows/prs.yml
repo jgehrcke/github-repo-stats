@@ -24,25 +24,24 @@ jobs:
       - name: test entrypoint.sh in action container
         env:
           INPUT_GHTOKEN: ${{ secrets.ghrs_github_api_token }}
-          GH_REPOSITORY_OVERRIDE: jgehrcke/ghrs-test
           INPUT_DATABRANCH: github-repo-stats
           INPUT_REPOSITORY: jgehrcke/github-repo-stats
-          PATH_GHRS_ROOT: /
-          GHRS_TESTING: true
           INPUT_GHPAGESPREFIX: none
-          GITHUB_WORKFLOW: localtesting
+          GHRS_DATA_REPOSPEC_OVERRIDE: jgehrcke/ghrs-test
+          GHRS_TESTING: true
+          GHRS_FILES_ROOT_PATH: /
         run: |
           docker run \
             --entrypoint "/bin/bash" \
-            -e INPUT_GHTOKEN \
             -e GITHUB_REPOSITORY \
-            -e GH_REPOSITORY_OVERRIDE \
+            -e GITHUB_WORKFLOW \
+            -e INPUT_GHTOKEN \
             -e INPUT_DATABRANCH \
             -e INPUT_REPOSITORY \
-            -e PATH_GHRS_ROOT \
-            -e GHRS_TESTING \
             -e INPUT_GHPAGESPREFIX \
-            -e GITHUB_WORKFLOW \
+            -e GHRS_DATA_REPOSPEC_OVERRIDE \
+            -e GHRS_TESTING \
+            -e GHRS_FILES_ROOT_PATH \
             -v $(pwd):/cwd \
             jgehrcke/github-repo-stats:local -c \
             'set -o errexit && mkdir /tmp/testrun && cd /tmp/testrun &&

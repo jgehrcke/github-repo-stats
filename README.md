@@ -207,13 +207,13 @@ Set environment variables, example:
 
 ```text
 export GITHUB_REPOSITORY=jgehrcke/ghrs-test
+export GITHUB_WORKFLOW="localtesting"
 export INPUT_DATABRANCH=databranch-test
 export INPUT_GHTOKEN="c***1"
 export INPUT_REPOSITORY=jgehrcke/covid-19-germany-gae
-export PATH_GHRS_ROOT="/home/jp/dev/github-repo-stats"
-export GHRS_TESTING="true"
 export INPUT_GHPAGESPREFIX="none"
-export GITHUB_WORKFLOW="localtesting"
+export GHRS_FILES_ROOT_PATH="/home/jp/dev/github-repo-stats"
+export GHRS_TESTING="true"
 ```
 
 Run in empty directory. Example:

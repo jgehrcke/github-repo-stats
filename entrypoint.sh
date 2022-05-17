@@ -14,7 +14,7 @@ UPDATE_ID="$(date +"%m-%d-%H%M" --utc)-${RNDSTR}"
 
 # For testing purposes, allow for overriding the path to the root of the
 # GHRS repo. Default to /. Expected: /fetch.py, /analyze.py, etc.
-PATH_GHRS_ROOT="${PATH_GHRS_ROOT:-/}"
+GHRS_FILES_ROOT_PATH="${GHRS_FILES_ROOT_PATH:-/}"
 
 # "When you specify an input to an action in a workflow file or use a default
 # input value, GitHub creates an environment variable for the input with the
@@ -27,17 +27,17 @@ PATH_GHRS_ROOT="${PATH_GHRS_ROOT:-/}"
 # This is the repository to fetch data for.
 STATS_REPOSPEC="${INPUT_REPOSITORY}"
 
-# DATA_REPOSPEC is the repository to store data and reports in.
+# DATA_REPOSPEC is the repository to store data and report artifacts in.
 # GITHUB_REPOSITORY is an environment variable specifying the repository this
-# action runs in. The repository this action runs in is (for now at least)
+# Action runs in. The repository this action runs in is (for now at least)
 # by definition the data repository.
 DATA_REPOSPEC="${GITHUB_REPOSITORY}"
 
-# For testing purposes: when run in a real GitHub Action then GITHUB_REPOSITORY
-# cannot be set manually.
-if [[ ${GH_REPOSITORY_OVERRIDE} ]]; then
-    echo "GH_REPOSITORY_OVERRIDE is set, ignore GITHUB_REPOSITORY"
-    DATA_REPOSPEC=${GH_REPOSITORY_OVERRIDE}
+# For local testing purposes: when run in a real GitHub Action then
+# GITHUB_REPOSITORY cannot be set manually.
+if [[ ${GHRS_DATA_REPOSPEC_OVERRIDE} ]]; then
+    echo "GHRS_DATA_REPOSPEC_OVERRIDE is set, ignore GITHUB_REPOSITORY"
+    DATA_REPOSPEC=${GHRS_DATA_REPOSPEC_OVERRIDE}
 fi
 
 # This is the API token used to fetch data (for the repo of interest) and
@@ -128,7 +128,7 @@ set +e
 # Note that the *-raw.csv files contain each star/fork event. These files do
 # for now not need to be in the repository (but it will make sense to store
 # them there once addressing the 10k star problem).
-python "${PATH_GHRS_ROOT}/fetch.py" "${STATS_REPOSPEC}" \
+python "${GHRS_FILES_ROOT_PATH}/fetch.py" "${STATS_REPOSPEC}" \
     --snapshot-directory=newsnapshots \
     --fork-ts-outpath=forks-raw.csv \
     --stargazer-ts-outpath=stars-raw.csv
@@ -169,8 +169,8 @@ sleep 1
 echo "Parse data files, perform aggregation and analysis, generate Markdown report and render as HTML"
 set -x
 set +e
-python "${PATH_GHRS_ROOT}/analyze.py" \
-    --resources-directory "${PATH_GHRS_ROOT}/resources" \
+python "${GHRS_FILES_ROOT_PATH}/analyze.py" \
+    --resources-directory "${GHRS_FILES_ROOT_PATH}/resources" \
     --output-directory latest-report \
     --outfile-prefix "" \
     --stargazer-ts-inpath "stars-raw.csv" \
@@ -205,7 +205,7 @@ git add ghrs-data/forks.csv ghrs-data/stargazers.csv || echo "git add failed, ig
 git commit -m "ghrs: stars and forks ${UPDATE_ID} for ${STATS_REPOSPEC}" || echo "commit failed, ignore  (continue)"
 
 echo "Translate HTML report into PDF, via headless Chrome"
-python "${PATH_GHRS_ROOT}/pdf.py" latest-report/report_for_pdf.html latest-report/report.pdf
+python "${GHRS_FILES_ROOT_PATH}/pdf.py" latest-report/report_for_pdf.html latest-report/report.pdf
 
 # Add directory contents (markdown, HTML, PDF).
 git add latest-report

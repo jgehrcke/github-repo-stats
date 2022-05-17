@@ -14,7 +14,6 @@ RUN pip install pip==22.1
 # for pdf.py: Note Explore bumping selenium to 4.x
 COPY requirements-fa.txt .
 RUN pip install -r requirements-fa.txt \
-    && pip uninstall --yes scipy \
     && pip install selenium==3.141.0 webdriver_manager==3.5.2 #  Dependencies for pdf.py \
     && pip cache purge
 

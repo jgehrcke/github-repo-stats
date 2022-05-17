@@ -2,23 +2,23 @@
 
 A GitHub Action ([in Marketplace](https://github.com/marketplace/actions/github-repo-stats)) built to overcome the [14-day limitation](https://github.com/isaacs/github/issues/399) of GitHub's built-in traffic statistics.
 
+High-level method description:
+
+* This GitHub Action runs once per day. Each run yields a snapshot of repository traffic statistics (influenced by the past 14 days). Snapshots are persisted via git.
+* Each run performs data analysis on all individual snapshots and generates a report from the aggregate — covering an *arbitrarily* long time frame.
+
 Start collecting data with this action **today!**
 
 Data that you don't collect today will be gone in two weeks from now.
 
-High-level method description:
-
-* This GitHub Action runs once per day. Each run yields a "snapshot" of repository traffic statistics (influenced by the past 14 days). Snapshots are persisted via git.
-* Each run performs data analysis on all individual snapshots and generates a report from the aggregate — covering an arbitrarily long time frame.
-
 ## Demo
 
 * Report:
-  * [HTML report](https://jgehrcke.github.io/ghrs-test/jgehrcke/covid-19-germany-gae/latest-report/report.html)
-  * [PDF report](https://jgehrcke.github.io/ghrs-test/jgehrcke/covid-19-germany-gae/latest-report/report.pdf)
+  * [HTML report](https://jgehrcke.github.io/ghrs-test/jgehrcke/github-repo-stats/latest-report/report.html)
+  * [PDF report](https://jgehrcke.github.io/ghrs-test/jgehrcke/github-repo-stats/latest-report/report.pdf)
 * Action setup (how the above's report is generated):
   * [Workflow file](https://github.com/jgehrcke/ghrs-test/blob/github-repo-stats/.github/workflows/github-repo-stats.yml)
-  * [Data branch](https://github.com/jgehrcke/ghrs-test/tree/github-repo-stats/jgehrcke/covid-19-germany-gae)
+  * [Data branch](https://github.com/jgehrcke/ghrs-test/tree/github-repo-stats/jgehrcke/github-repo-stats)
 
 ## Highlights
 
@@ -43,7 +43,7 @@ High-level method description:
 
 ## Credits
 
-This walks on the shoulders of giants. Shoutout to
+This walks on the shoulders of giants:
 
 * [Pandoc](https://pandoc.org/) for rendering HTML from Markdown.
 * [Altair](https://altair-viz.github.io/) and [Vega-Lite](https://vega.github.io/vega-lite/) for visualization.
@@ -57,7 +57,7 @@ This walks on the shoulders of giants. Shoutout to
 Naming is hard :-). Let's define two concepts and their names:
 
 * The *stats repository* is the repository to fetch stats for and to generate the report for.
-* The *data repository* is the repository to store data and report files in.
+* The *data repository* is the repository to store data and report files in. This is also the repository where this Action runs in.
 
 Let me know if you can think of better names.
 
@@ -65,7 +65,7 @@ These two repositories can be the same. But they don't have to be :-).
 
 That is, you can for example set up this Action in a private repository but have it observe a public repository.
 
-### Setup
+### Setup (tutorial)
 
 Example scenario:
 
@@ -90,7 +90,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: run-ghrs
-        uses: jgehrcke/github-repo-stats@v1.1.0
+        uses: jgehrcke/github-repo-stats@v1.3.0
         with:
           # Define the stats repository (the repo to fetch
           # stats for and to generate the report for).
@@ -100,7 +100,9 @@ jobs:
           # Set a GitHub API token that can read the stats
           # repository, and that can push to the data
           # repository (which this workflow file lives in),
-          # to store data and the report files.
+          # to store data and the report files. This is
+          # not needed when the stats repository and the
+          # data repository are the same.
           ghtoken: ${{ secrets.ghrs_github_api_token }}
 
 ```
@@ -111,34 +113,26 @@ jobs:
 The content of the secret needs to be an API token that has the `repo` scope for accessing the _stats_ repository.
 You can create such a personal access token under [github.com/settings/tokens](https://github.com/settings/tokens).
 
-### Input parameter reference
+### Config parameter reference
 
-Extract from `action.yml`:
+In the workflow file you can use a number of configuration parameters. They
+are specified and documented in the action.yml file (the reference). Here
+is a copy for convenience:
 
-```yaml
-  repository:
-    description: >
-      Repository spec (<owner-or-org>/<reponame>) for the repository to fetch
-      statistics for.
-    default: ${{ github.repository }}
-  ghtoken:
-    description: >
-      GitHub API token for reading repo stats and for interacting with the data
-      repo (must be set if repo to fetch stats for is not the data repo).
-    default: ${{ github.token }}
-  databranch:
-    description: >
-      Data branch: Branch to push data to (in the data repo).
-    default: github-repo-stats
-  ghpagesprefix:
-    description: >
-      Set this if the data branch in the data repo is exposed via GitHub pages.
-      Must not end with a slash. Example: https://jgehrcke.github.io/ghrs-test
-    default: none
-```
+* `repository`: Repository spec (`<owner-or-org>/<reponame>`) for the repository
+  to fetch statistics for. Ddefault: `${{ github.repository }}`
+* `ghtoken`: GitHub API token for reading repo stats and for interacting with
+  the data repo (must be set if repo to fetch stats for is not the data repo).
+  Default: `${{ github.token }}`
+* `databranch`: Branch to push data to (in the data repo).
+  Default: `github-repo-stats`
+* `ghpagesprefix`: Set this if the data branch in the data repo is exposed via
+  GitHub pages. Must not end with a slash.
+  Example: `https://jgehrcke.github.io/ghrs-test`
+  Default: none
 
 It is recommended that you create the data branch and delete all files from that branch before setting this Action up in your reposistory, so that this data branch appears as a tidy environment.
-You can of course do that later, too.
+You can of course remove files from that branch at any other point in time, too.
 
 ### Tracking multiple repositories via `matrix`
 
@@ -182,9 +176,11 @@ jobs:
           databranch: main
 ```
 
-## Developer instructions
+## Developer notes
 
-Here is how to run some sanity checks from within a fresh checkout:
+### CLI tests
+
+Here is how to run [bats](https://github.com/bats-core/bats-core)-based checks from within a checkout:
 
 ```bash
 $ git clone https://github.com/jgehrcke/github-repo-stats
@@ -198,11 +194,39 @@ ok 2 analyze.py: snapshots: some, vcagg: yes, stars: none, forks: some
 ok 3 analyze.py: snapshots: some, vcagg: yes, stars: some, forks: some
 ok 4 analyze.py: snapshots: some, vcagg: no, stars: some, forks: some
 ok 5 analyze.py + pdf.py: snapshots: some, vcagg: no, stars: some, forks: some
+```
 
+### Lint
+
+```bash
 $ make lint
 ...
 All done! ✨ 🍰 ✨
 ...
+```
+
+### local run of entrypoint.sh
+
+Set environment variables, example:
+
+```bash
+export GITHUB_REPOSITORY=jgehrcke/ghrs-test
+export GITHUB_WORKFLOW="localtesting"
+export INPUT_DATABRANCH=databranch-test
+export INPUT_GHTOKEN="c***1"
+export INPUT_REPOSITORY=jgehrcke/covid-19-germany-gae
+export INPUT_GHPAGESPREFIX="none"
+export GHRS_FILES_ROOT_PATH="/home/jp/dev/github-repo-stats"
+export GHRS_TESTING="true"
+```
+
+(for an up-to-date list of required env vars see `.github/workflows/prs.yml`)
+
+Run in empty directory. Example:
+
+```bash
+cd /tmp/ghrstest
+rm -rf .* *; bash /home/jp/dev/github-repo-stats/entrypoint.sh
 ```
 
 ## Further resources

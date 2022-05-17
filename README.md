@@ -2,14 +2,14 @@
 
 A GitHub Action ([in Marketplace](https://github.com/marketplace/actions/github-repo-stats)) built to overcome the [14-day limitation](https://github.com/isaacs/github/issues/399) of GitHub's built-in traffic statistics.
 
+High-level method description:
+
+* This GitHub Action runs once per day. Each run yields a snapshot of repository traffic statistics (influenced by the past 14 days). Snapshots are persisted via git.
+* Each run performs data analysis on all individual snapshots and generates a report from the aggregate — covering an *arbitrarily* long time frame.
+
 Start collecting data with this action **today!**
 
 Data that you don't collect today will be gone in two weeks from now.
-
-High-level method description:
-
-* This GitHub Action runs once per day. Each run yields a "snapshot" of repository traffic statistics (influenced by the past 14 days). Snapshots are persisted via git.
-* Each run performs data analysis on all individual snapshots and generates a report from the aggregate — covering an arbitrarily long time frame.
 
 ## Demo
 
@@ -43,7 +43,7 @@ High-level method description:
 
 ## Credits
 
-This walks on the shoulders of giants. Shoutout to
+This walks on the shoulders of giants:
 
 * [Pandoc](https://pandoc.org/) for rendering HTML from Markdown.
 * [Altair](https://altair-viz.github.io/) and [Vega-Lite](https://vega.github.io/vega-lite/) for visualization.
@@ -113,7 +113,7 @@ jobs:
 The content of the secret needs to be an API token that has the `repo` scope for accessing the _stats_ repository.
 You can create such a personal access token under [github.com/settings/tokens](https://github.com/settings/tokens).
 
-### Input parameter reference
+### Config parameter reference
 
 In the workflow file you can use a number of configuration parameters. They
 are specified and documented in the action.yml file (the reference). Here
@@ -176,11 +176,11 @@ jobs:
           databranch: main
 ```
 
-## Developer instructions
+## Developer notes
 
-### clitests
+### CLI tests
 
-Here is how to run some sanity checks from within a fresh checkout:
+Here is how to run [bats](https://github.com/bats-core/bats-core)-based checks from within a checkout:
 
 ```bash
 $ git clone https://github.com/jgehrcke/github-repo-stats
@@ -194,18 +194,22 @@ ok 2 analyze.py: snapshots: some, vcagg: yes, stars: none, forks: some
 ok 3 analyze.py: snapshots: some, vcagg: yes, stars: some, forks: some
 ok 4 analyze.py: snapshots: some, vcagg: no, stars: some, forks: some
 ok 5 analyze.py + pdf.py: snapshots: some, vcagg: no, stars: some, forks: some
+```
 
+### Lint
+
+```bash
 $ make lint
 ...
 All done! ✨ 🍰 ✨
 ...
 ```
 
-### local testing of entrypoint.sh
+### local run of entrypoint.sh
 
 Set environment variables, example:
 
-```text
+```bash
 export GITHUB_REPOSITORY=jgehrcke/ghrs-test
 export GITHUB_WORKFLOW="localtesting"
 export INPUT_DATABRANCH=databranch-test
@@ -216,11 +220,13 @@ export GHRS_FILES_ROOT_PATH="/home/jp/dev/github-repo-stats"
 export GHRS_TESTING="true"
 ```
 
+(for an up-to-date list of required env vars see `.github/workflows/prs.yml`)
+
 Run in empty directory. Example:
 
 ```bash
-$ cd /tmp/ghrstest
-$ rm -rf .* *; bash /home/jp/dev/github-repo-stats/entrypoint.sh
+cd /tmp/ghrstest
+rm -rf .* *; bash /home/jp/dev/github-repo-stats/entrypoint.sh
 ```
 
 ## Further resources

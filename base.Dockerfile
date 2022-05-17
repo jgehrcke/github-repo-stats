@@ -9,7 +9,7 @@ RUN echo "deb [arch=amd64]  http://dl.google.com/linux/chrome/deb/ stable main" 
 RUN apt-get -y update
 RUN apt-get -y install google-chrome-stable
 
-RUN pip install pip==21.3.1
+RUN pip install pip==22.1
 
 # Dependencies for fetch.py & analyze.py
 COPY requirements-fa.txt .

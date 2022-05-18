@@ -2,23 +2,22 @@
 
 A GitHub Action ([in Marketplace](https://github.com/marketplace/actions/github-repo-stats)) built to overcome the [14-day limitation](https://github.com/isaacs/github/issues/399) of GitHub's built-in traffic statistics.
 
+Data that you don't persist today will be gone in two weeks from now.
+
 High-level method description:
 
 * This GitHub Action runs once per day. Each run yields a snapshot of repository traffic statistics (influenced by the past 14 days). Snapshots are persisted via git.
 * Each run performs data analysis on all individual snapshots and generates a report from the aggregate — covering an *arbitrarily* long time frame.
 
-Start collecting data with this action **today!**
-
-Data that you don't collect today will be gone in two weeks from now.
-
 ## Demo
 
-* Report:
-  * [HTML report](https://jgehrcke.github.io/ghrs-test/jgehrcke/github-repo-stats/latest-report/report.html)
-  * [PDF report](https://jgehrcke.github.io/ghrs-test/jgehrcke/github-repo-stats/latest-report/report.pdf)
-* Action setup (how the above's report is generated):
-  * [Workflow file](https://github.com/jgehrcke/ghrs-test/blob/github-repo-stats/.github/workflows/github-repo-stats.yml)
-  * [Data branch](https://github.com/jgehrcke/ghrs-test/tree/github-repo-stats/jgehrcke/github-repo-stats)
+**Demo 1**:
+* [HTML report](https://jgehrcke.github.io/ghrs-test/jgehrcke/github-repo-stats/latest-report/report.html), [PDF report](https://jgehrcke.github.io/ghrs-test/jgehrcke/github-repo-stats/latest-report/report.pdf)
+* [Workflow file](https://github.com/jgehrcke/ghrs-test/blob/github-repo-stats/.github/workflows/github-repo-stats.yml), [data branch](https://github.com/jgehrcke/ghrs-test/tree/github-repo-stats/jgehrcke/github-repo-stats)
+
+**Demo 2**:
+* [HTML report](https://jgehrcke.github.io/ghrs-test/jgehrcke/covid-19-germany-gae/latest-report/report.html), [PDF report](https://jgehrcke.github.io/ghrs-test/jgehrcke/covid-19-germany-gae/latest-report/report.pdf)
+* [Workflow file](https://github.com/jgehrcke/ghrs-test/blob/covid-19-germany-gae/.github/workflows/github-repo-stats.yml), [data branch](https://github.com/jgehrcke/ghrs-test/tree/covid-19-germany-gae/jgehrcke/github-repo-stats)
 
 ## Highlights
 

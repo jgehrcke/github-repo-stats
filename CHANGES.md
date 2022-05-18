@@ -1,16 +1,22 @@
 # Changelog
 
-## 1.4.0
-
-Data handling:
-
-* Make the top-N plots for referrers and pages less busy: show the top 7 instead of top 10 and downsample to one data point per five days if the total of samples would otherwise grow beyond 3000.
+## 1.4.0 (2022-05-18)
 
 Bug fixes:
 
-* Do not fail Action when the number of data point to be plotted in a single graph grows beyond 5000  (also see [#52](https://github.com/jgehrcke/github-repo-stats/issues/52)).
+* Do not fail Action when the number of data points to be plotted in a single graph grows beyond 5000  (also see [#52](https://github.com/jgehrcke/github-repo-stats/issues/52)).
 * Do not fail Action when no forks exist (also see [#49](https://github.com/jgehrcke/github-repo-stats/issues/49)).
 
+Data handling:
+
+* Make the top-N plots for referrers and pages less busy: show the top 7 instead of top 10 and downsample to one data point per five days if the total number of samples would otherwise grow beyond 3000.
+
+Misc:
+
+* Log output: improved debuggability.
+* Conservative dependency update; new base image.
+
+Testing: better coverage of `entrypoint.sh` logic in CI, better debuggability of `bats`-based CLI tests.
 
 ## 1.3.0 (2021-12-03)
 

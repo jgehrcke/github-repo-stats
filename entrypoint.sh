@@ -83,8 +83,8 @@ if [ ! -d ".git" ]; then
     # https://stackoverflow.com/a/4568323/145400.
     set -x
     git ls-remote --exit-code --heads https://ghactions:${GHRS_GITHUB_API_TOKEN}@github.com/${DATA_REPOSPEC}.git "${DATA_BRANCH_NAME}"
-    set +x
     LS_ECODE=$?
+    set +x
     set -e
     if [ $LS_ECODE -eq 2 ]; then
         # expected failure: DATA_BRANCH_NAME branch doesn't exist (yet).

@@ -58,10 +58,11 @@ echo "STATS_REPOSPEC: $STATS_REPOSPEC"
 echo "DATA_REPOSPEC: $DATA_REPOSPEC"
 echo "UPDATE_ID: $UPDATE_ID"
 
-if [ -d ".git" ]; then
-    echo "there is a .git dir in cwd. is that a data repo checkout? an accident? terminate."
-    exit 1
-fi
+# I have seen in the wild that in some action workflows the current working
+# directory is _not_ empty. In those cases, the `git clone` below may fail with
+#  fatal: destination path '.' already exists and is not an empty directory.
+# To conceptually prepare for this, create a new unique directory.
+mkdir -p "$UPDATE_ID" && cd "$UPDATE_ID"
 
 # allow using local copy of data repo for local testing.
 if [ -z ${GHRS_TESTING_DATA_REPO_DIR+x} ]; then

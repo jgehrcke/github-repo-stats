@@ -77,7 +77,7 @@ else
 fi
 
 if [ ! -d ".git" ]; then
-    echo "fetch data repo from remote"
+    echo "use 'git ls-remote' to check if data branch exists in data repo"
     set +e
     # Check out data branch only if it exists. To minimize overhead, also see
     # https://stackoverflow.com/a/4568323/145400.
@@ -99,7 +99,7 @@ if [ ! -d ".git" ]; then
         git checkout -b "${DATA_BRANCH_NAME}"
         set +x
     elif [ $LS_ECODE -eq 0 ]; then
-        # DATA_BRANCH_NAME branch exists. Perform shallow clone.
+        echo "$DATA_BRANCH_NAME branch exists. Perform shallow clone."
         set -x
         git clone --single-branch --branch "${DATA_BRANCH_NAME}" https://ghactions:${GHRS_GITHUB_API_TOKEN}@github.com/${DATA_REPOSPEC}.git .
         set +x
@@ -109,7 +109,7 @@ if [ ! -d ".git" ]; then
         exit 1
     fi
 else
-    echo ".git repo is present, treat current dir as correct data repo checkout"
+    echo ".git directory is present, treat current dir as correct data repo checkout"
 fi
 
 

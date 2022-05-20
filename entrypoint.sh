@@ -58,10 +58,11 @@ echo "STATS_REPOSPEC: $STATS_REPOSPEC"
 echo "DATA_REPOSPEC: $DATA_REPOSPEC"
 echo "UPDATE_ID: $UPDATE_ID"
 
-if [ -d ".git" ]; then
-    echo "there is a .git dir in cwd. is that a data repo checkout? an accident? terminate."
-    exit 1
-fi
+# I have seen in the wild that in some action workflows the current working
+# directory is _not_ empty. In those cases, the `git clone` below may fail with
+#  fatal: destination path '.' already exists and is not an empty directory.
+# To conceptually prepare for this, create a new unique directory.
+mkdir -p "$UPDATE_ID" && cd "$UPDATE_ID"
 
 # allow using local copy of data repo for local testing.
 if [ -z ${GHRS_TESTING_DATA_REPO_DIR+x} ]; then
@@ -77,7 +78,7 @@ else
 fi
 
 if [ ! -d ".git" ]; then
-    echo "fetch data repo from remote"
+    echo "use 'git ls-remote' to check if data branch exists in data repo"
     set +e
     # Check out data branch only if it exists. To minimize overhead, also see
     # https://stackoverflow.com/a/4568323/145400.
@@ -99,7 +100,7 @@ if [ ! -d ".git" ]; then
         git checkout -b "${DATA_BRANCH_NAME}"
         set +x
     elif [ $LS_ECODE -eq 0 ]; then
-        # DATA_BRANCH_NAME branch exists. Perform shallow clone.
+        echo "$DATA_BRANCH_NAME branch exists. Perform shallow clone."
         set -x
         git clone --single-branch --branch "${DATA_BRANCH_NAME}" https://ghactions:${GHRS_GITHUB_API_TOKEN}@github.com/${DATA_REPOSPEC}.git .
         set +x
@@ -109,7 +110,7 @@ if [ ! -d ".git" ]; then
         exit 1
     fi
 else
-    echo ".git repo is present, treat current dir as correct data repo checkout"
+    echo ".git directory is present, treat current dir as correct data repo checkout"
 fi
 
 

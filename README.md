@@ -9,6 +9,9 @@ High-level method description:
 * This GitHub Action runs once per day. Each run yields a snapshot of repository traffic statistics (influenced by the past 14 days). Snapshots are persisted via git.
 * Each run performs data analysis on all individual snapshots and generates a report from the aggregate — covering an *arbitrarily* long time frame.
 
+Looking for a quick start? Follow the [simple tutorial](https://github.com/jgehrcke/github-repo-stats/wiki/Tutorial) in the Wiki.
+
+
 ## Demo
 
 **Demo 1**:
@@ -64,7 +67,10 @@ These two repositories can be the same. But they don't have to be :-).
 
 That is, you can for example set up this Action in a private repository but have it observe a public repository.
 
-### Setup (tutorial)
+### Setup
+
+This section contains brief instructions for a scenario where the data repository is different from the stats repository.
+For a more detailed walkthrough (showing how to greate a personal access token, and also which `git` commands to use) please follow the [Tutorial](https://github.com/jgehrcke/github-repo-stats/wiki/Tutorial) in the wiki.
 
 Example scenario:
 
@@ -110,7 +116,7 @@ jobs:
 
 **Note:** if you set `ghtoken: ${{ secrets.ghrs_github_api_token }}` as above then in the _data_ repository (where the action is executed) you need to have a secret defined, with the name `GHRS_GITHUB_API_TOKEN` (of course you can change the name in both places).
 The content of the secret needs to be an API token that has the `repo` scope for accessing the _stats_ repository.
-You can create such a personal access token under [github.com/settings/tokens](https://github.com/settings/tokens).
+The content of the secret needs to be an API token that has the `repo` scope. Follow the [tutorial](https://github.com/jgehrcke/github-repo-stats/wiki/Tutorial) for precise instructions.
 
 ### Config parameter reference
 

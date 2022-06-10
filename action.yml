@@ -11,9 +11,9 @@ inputs:
     default: ${{ github.repository }}
   ghtoken:
     description: >
-      GitHub API token for reading repo stats and for interacting with the data
-      repo (must be set if repo to fetch stats for is not the data repo).
-    default: ${{ github.token }}
+      GitHub API token for reading the GitHub repository traffic API and
+      for interacting with the data repo. Required.
+    required: true
   databranch:
     description: >
       Data branch: Branch to push data to (in the data repo).

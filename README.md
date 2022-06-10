@@ -9,6 +9,9 @@ High-level method description:
 * This GitHub Action runs once per day. Each run yields a snapshot of repository traffic statistics (influenced by the past 14 days). Snapshots are persisted via git.
 * Each run performs data analysis on all individual snapshots and generates a report from the aggregate — covering an *arbitrarily* long time frame.
 
+Looking for a quick start? Follow the [simple tutorial](https://github.com/jgehrcke/github-repo-stats/wiki/Tutorial) in the Wiki.
+
+
 ## Demo
 
 **Demo 1**:
@@ -64,7 +67,10 @@ These two repositories can be the same. But they don't have to be :-).
 
 That is, you can for example set up this Action in a private repository but have it observe a public repository.
 
-### Setup (tutorial)
+### Setup
+
+This section contains brief instructions for a scenario where the data repository is different from the stats repository.
+For a more detailed walkthrough (showing how to greate a personal access token, and also which `git` commands to use) please follow the [Tutorial](https://github.com/jgehrcke/github-repo-stats/wiki/Tutorial) in the wiki.
 
 Example scenario:
 
@@ -89,40 +95,38 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: run-ghrs
-        uses: jgehrcke/github-repo-stats@v1.3.0
+        uses: jgehrcke/github-repo-stats@RELEASE
         with:
           # Define the stats repository (the repo to fetch
           # stats for and to generate the report for).
           # Remove the parameter when the stats repository
           # and the data repository are the same.
           repository: bob/nice-project
-          # Set a GitHub API token that can read the stats
-          # repository, and that can push to the data
-          # repository (which this workflow file lives in),
-          # to store data and the report files. This is
-          # not needed when the stats repository and the
-          # data repository are the same.
+          # Set a GitHub API token that can read the GitHub
+          # repository traffic API for the stats repository,
+          # and that can push commits to the data repository
+          # (which this workflow file lives in, to store data
+          # and the report files).
           ghtoken: ${{ secrets.ghrs_github_api_token }}
 
 ```
 
 **Note:** the recommended way to run this Action is on a schedule, once per day. Really.
 
-**Note:** if you set `ghtoken: ${{ secrets.ghrs_github_api_token }}` as above then in the _data_ repository (where the action is executed) you need to have a secret defined, with the name `GHRS_GITHUB_API_TOKEN` (of course you can change the name in both places).
-The content of the secret needs to be an API token that has the `repo` scope for accessing the _stats_ repository.
-You can create such a personal access token under [github.com/settings/tokens](https://github.com/settings/tokens).
+**Note:** defining `ghtoken: ${{ secrets.ghrs_github_api_token }}` is required. In the _data_ repository (where the action is executed) you need to have a secret defined, with the name `GHRS_GITHUB_API_TOKEN` (of course you can change the name in both places).
+The content of the secret needs to be an API token that has the `repo` scope. Follow the [tutorial](https://github.com/jgehrcke/github-repo-stats/wiki/Tutorial) for precise instructions.
 
 ### Config parameter reference
 
-In the workflow file you can use a number of configuration parameters. They
-are specified and documented in the action.yml file (the reference). Here
-is a copy for convenience:
+In the workflow file you can set various configuration parameters. They
+are specified and documented in the `action.yml` file (the reference). Here
+is a quick description, for convenience:
 
+* `ghtoken`: GitHub API token for reading the GitHub repository traffic API for
+  the stats repo, and for pushing commits to the data repo. Required.
 * `repository`: Repository spec (`<owner-or-org>/<reponame>`) for the repository
-  to fetch statistics for. Ddefault: `${{ github.repository }}`
-* `ghtoken`: GitHub API token for reading repo stats and for interacting with
-  the data repo (must be set if repo to fetch stats for is not the data repo).
-  Default: `${{ github.token }}`
+  to fetch statistics for. Default: `${{ github.repository }}` (the repo this
+  Action runs in).
 * `databranch`: Branch to push data to (in the data repo).
   Default: `github-repo-stats`
 * `ghpagesprefix`: Set this if the data branch in the data repo is exposed via
@@ -164,15 +168,10 @@ jobs:
       max-parallel: 1
     steps:
       - name: run-ghrs
-        uses: jgehrcke/github-repo-stats@v1.2.0
+        uses: jgehrcke/github-repo-stats@RELEASE
         with:
-          # Repo to fetch stats for and to generate the report for.
           repository: ${{ matrix.statsRepo }}
-          # Token that can read the stats repository and that
-          # can push to the data repository.
           ghtoken: ${{ secrets.ghrs_github_api_token }}
-          # Data branch: Branch to push data to (in the data repo).
-          databranch: main
 ```
 
 ## Developer notes
@@ -233,3 +232,15 @@ rm -rf .* *; bash /home/jp/dev/github-repo-stats/entrypoint.sh
 * [“GitHub Stars” -- useful for *what*?](https://opensource.stackexchange.com/questions/5110/github-stars-is-a-very-useful-metric-but-for-what/5114#5114)
 * [GitHub Traffic API docs](https://docs.github.com/en/free-pro-team@latest/rest/reference/repos#traffic)
 * [Do your own views count?](https://stackoverflow.com/a/63697886/145400)
+
+## Used by
+
+A few rather randomly picked use cases:
+
+* https://github.com/ignite-hq/cli/tree/github-repo-stats/ignite-hq/cli
+* https://github.com/tom-doerr/github_repo_stats_data/tree/master/tom-doerr
+* https://github.com/ethyca/fides-stats/tree/main/ethyca/fides
+* https://github.com/dylansdaniels/hnn_tracking_test/tree/main/jonescompneurolab/hnn
+* https://github.com/idaholab/repository-statistics/tree/main/idaholab
+* https://github.com/Declipsonator/Tweaks-Stats/tree/main/Declipsonator/Meteor-Tweaks
+* https://github.com/gitsrc/icefiredb-status/tree/github-repo-stats/IceFireDB/IceFireDB

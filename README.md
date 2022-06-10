@@ -239,3 +239,15 @@ rm -rf .* *; bash /home/jp/dev/github-repo-stats/entrypoint.sh
 * [“GitHub Stars” -- useful for *what*?](https://opensource.stackexchange.com/questions/5110/github-stars-is-a-very-useful-metric-but-for-what/5114#5114)
 * [GitHub Traffic API docs](https://docs.github.com/en/free-pro-team@latest/rest/reference/repos#traffic)
 * [Do your own views count?](https://stackoverflow.com/a/63697886/145400)
+
+## Used by
+
+A few rather randomly picked use cases:
+
+* https://github.com/ignite-hq/cli/tree/github-repo-stats/ignite-hq/cli
+* https://github.com/tom-doerr/github_repo_stats_data/tree/master/tom-doerr
+* https://github.com/ethyca/fides-stats/tree/main/ethyca/fides
+* https://github.com/dylansdaniels/hnn_tracking_test/tree/main/jonescompneurolab/hnn
+* https://github.com/idaholab/repository-statistics/tree/main/idaholab
+* https://github.com/Declipsonator/Tweaks-Stats/tree/main/Declipsonator/Meteor-Tweaks
+* https://github.com/gitsrc/icefiredb-status/tree/github-repo-stats/IceFireDB/IceFireDB

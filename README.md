@@ -95,7 +95,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: run-ghrs
-        uses: jgehrcke/github-repo-stats@v1.3.0
+        uses: jgehrcke/github-repo-stats@RELEASE
         with:
           # Define the stats repository (the repo to fetch
           # stats for and to generate the report for).
@@ -170,7 +170,7 @@ jobs:
       max-parallel: 1
     steps:
       - name: run-ghrs
-        uses: jgehrcke/github-repo-stats@v1.2.0
+        uses: jgehrcke/github-repo-stats@RELEASE
         with:
           # Repo to fetch stats for and to generate the report for.
           repository: ${{ matrix.statsRepo }}

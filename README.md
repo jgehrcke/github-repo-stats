@@ -102,33 +102,31 @@ jobs:
           # Remove the parameter when the stats repository
           # and the data repository are the same.
           repository: bob/nice-project
-          # Set a GitHub API token that can read the stats
-          # repository, and that can push to the data
-          # repository (which this workflow file lives in),
-          # to store data and the report files. This is
-          # not needed when the stats repository and the
-          # data repository are the same.
+          # Set a GitHub API token that can read the GitHub
+          # repository traffic API for the stats repository,
+          # and that can push commits to the data repository
+          # (which this workflow file lives in, to store data
+          # and the report files).
           ghtoken: ${{ secrets.ghrs_github_api_token }}
 
 ```
 
 **Note:** the recommended way to run this Action is on a schedule, once per day. Really.
 
-**Note:** if you set `ghtoken: ${{ secrets.ghrs_github_api_token }}` as above then in the _data_ repository (where the action is executed) you need to have a secret defined, with the name `GHRS_GITHUB_API_TOKEN` (of course you can change the name in both places).
-The content of the secret needs to be an API token that has the `repo` scope for accessing the _stats_ repository.
+**Note:** defining `ghtoken: ${{ secrets.ghrs_github_api_token }}` is required. In the _data_ repository (where the action is executed) you need to have a secret defined, with the name `GHRS_GITHUB_API_TOKEN` (of course you can change the name in both places).
 The content of the secret needs to be an API token that has the `repo` scope. Follow the [tutorial](https://github.com/jgehrcke/github-repo-stats/wiki/Tutorial) for precise instructions.
 
 ### Config parameter reference
 
-In the workflow file you can use a number of configuration parameters. They
-are specified and documented in the action.yml file (the reference). Here
-is a copy for convenience:
+In the workflow file you can set various configuration parameters. They
+are specified and documented in the `action.yml` file (the reference). Here
+is a quick description, for convenience:
 
+* `ghtoken`: GitHub API token for reading the GitHub repository traffic API for
+  the stats repo, and for pushing commits to the data repo. Required.
 * `repository`: Repository spec (`<owner-or-org>/<reponame>`) for the repository
-  to fetch statistics for. Ddefault: `${{ github.repository }}`
-* `ghtoken`: GitHub API token for reading repo stats and for interacting with
-  the data repo (must be set if repo to fetch stats for is not the data repo).
-  Default: `${{ github.token }}`
+  to fetch statistics for. Default: `${{ github.repository }}` (the repo this
+  Action runs in).
 * `databranch`: Branch to push data to (in the data repo).
   Default: `github-repo-stats`
 * `ghpagesprefix`: Set this if the data branch in the data repo is exposed via
@@ -172,13 +170,8 @@ jobs:
       - name: run-ghrs
         uses: jgehrcke/github-repo-stats@RELEASE
         with:
-          # Repo to fetch stats for and to generate the report for.
           repository: ${{ matrix.statsRepo }}
-          # Token that can read the stats repository and that
-          # can push to the data repository.
           ghtoken: ${{ secrets.ghrs_github_api_token }}
-          # Data branch: Branch to push data to (in the data repo).
-          databranch: main
 ```
 
 ## Developer notes

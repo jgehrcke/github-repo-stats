@@ -24,7 +24,7 @@ import shutil
 import sys
 import tempfile
 
-from typing import Iterable, Set, Any, Optional, Tuple
+from typing import Iterable, Set, Any, Optional, Tuple, Iterator, cast
 from datetime import datetime
 from io import StringIO
 
@@ -845,7 +845,8 @@ def analyse_view_clones_ts_fragments() -> pd.DataFrame:
             log.error("columns in %s: %s", p, df.columns)
             sys.exit(1)
 
-        column_names_seen.update(df.columns)
+        # `.columns` is known to be only strings
+        column_names_seen.update(cast(Iterator[str], df.columns))
 
         df = df.sort_index()
 

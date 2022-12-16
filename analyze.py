@@ -488,6 +488,8 @@ def _glob_csvpaths(basename_suffix):
 def analyse_top_x_snapshots(entity_type, date_axis_lim):
     assert entity_type in ["referrer", "path"]
 
+    heading = "Top referrers" if entity_type == "referrer" else "Top paths"
+
     log.info("read 'top %s' snapshots (CSV docs)", entity_type)
     basename_suffix = f"_top_{entity_type}s_snapshot.csv"
     csvpaths = _glob_csvpaths(basename_suffix)
@@ -515,6 +517,20 @@ def analyse_top_x_snapshots(entity_type, date_axis_lim):
     # referrers/paths. Now, invert that structure: work towards individual
     # dataframes where each dataframe corresponds to a single referrer/path,
     # and contains imformation about multiple timestamps
+
+    if not len(snapshot_dfs):
+        MD_REPORT.write(
+            textwrap.dedent(
+                f"""
+
+        #### {heading}
+
+        No {entity_type} data available.
+
+        """
+            )
+        )
+        return
 
     # First, create a dataframe containing all information.
     dfa = pd.concat(snapshot_dfs)
@@ -736,8 +752,6 @@ def analyse_top_x_snapshots(entity_type, date_axis_lim):
     # has a size determined outside the chart itself; For example, the
     # container may be a <div> element that has style width: 100%; height:
     # 300px.""
-
-    heading = "Top referrers" if entity_type == "referrer" else "Top paths"
 
     # Textual form: larger N, and no cutoff (arbitrary length and legend of
     # plot don't go well with each other).

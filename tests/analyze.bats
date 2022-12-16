@@ -46,6 +46,26 @@ setup() {
   [ "$status" -eq 0 ]
 }
 
+@test "analyze.py: snapshots: none, vcagg: yes, stars: none, forks: none" {
+  run python analyze.py owner/repo tests/data/A/snapshots/does-not-exist \
+    --resources-directory=resources \
+    --output-directory $BATS_TEST_TMPDIR/outdir \
+    --outfile-prefix "" \
+    --stargazer-ts-resampled-outpath $BATS_TEST_TMPDIR/stargazers-rs.csv \
+    --fork-ts-resampled-outpath $BATS_TEST_TMPDIR/forks-rs.csv \
+    --views-clones-aggregate-inpath tests/data/A/views_clones_aggregate.csv
+  [ "$status" -eq 0 ]
+
+  assert_exist $BATS_TEST_TMPDIR/outdir/report.html
+
+  run grep "No referrer data available" $BATS_TEST_TMPDIR/outdir/report.html
+  [ "$status" -eq 0 ]
+
+  run grep "No path data available" $BATS_TEST_TMPDIR/outdir/report.html
+  [ "$status" -eq 0 ]
+}
+
+
 @test "analyze.py: snapshots: some, vcagg: yes, stars: some, forks: some" {
   assert_not_exist $BATS_TEST_TMPDIR/forks-rs.csv
   run python analyze.py owner/repo tests/data/A/snapshots \

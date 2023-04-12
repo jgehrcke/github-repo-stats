@@ -134,7 +134,7 @@ is a quick description, for convenience:
   Example: `https://jgehrcke.github.io/ghrs-test`
   Default: none
 
-It is recommended that you create the data branch and delete all files from that branch before setting this Action up in your reposistory, so that this data branch appears as a tidy environment.
+It is recommended that you create the data branch and delete all files from that branch before setting this Action up in your repository, so that this data branch appears as a tidy environment.
 You can of course remove files from that branch at any other point in time, too.
 
 ### Tracking multiple repositories via `matrix`

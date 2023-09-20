@@ -233,7 +233,7 @@ cat << EOF > README.md
 - managed by GitHub Action: https://github.com/jgehrcke/github-repo-stats
 - workflow that created this README: \`${GITHUB_WORKFLOW}\`
 
-**Latest report PDF**: [report.pdf](https://github.com/${DATA_REPOSPEC}/raw/${DATA_BRANCH_NAME}/${STATS_REPOSPEC}/latest-report/report.pdf)
+**Latest report PDF**: [GitHub-rendered](https://github.com/${DATA_REPOSPEC}/blob/${DATA_BRANCH_NAME}/${STATS_REPOSPEC}/latest-report/report.pdf), [raw](https://github.com/${DATA_REPOSPEC}/raw/${DATA_BRANCH_NAME}/${STATS_REPOSPEC}/latest-report/report.pdf)
 
 EOF
 

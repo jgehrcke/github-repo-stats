@@ -117,6 +117,7 @@ def main() -> None:
 
 def fetch_and_write_stargazer_ts(repo: Repository.Repository, path: str):
     dfstarscsv = get_stars_over_time(repo)
+    dfstarscsv = get_stars_over_time_40k_limit(repo)
     log.info("stars_cumulative, for CSV file:\n%s", dfstarscsv)
     tpath = path + ".tmp"  # todo: rnd string
     log.info(
@@ -364,7 +365,12 @@ def get_forks_over_time(repo: Repository.Repository) -> pd.DataFrame:
     return df
 
 
-def get_stars_over_time(repo: Repository.Repository) -> pd.DataFrame:
+def get_stars_over_time_40k_limit(repo: Repository.Repository) -> pd.DataFrame:
+    """
+    Fetch stargazer-over-time from beginning of time. This returns at most
+    the oldest 40.000 stargazers (a GitHub HTTP API limitation, see
+    https://github.com/jgehrcke/github-repo-stats/issues/76).
+    """
     # TODO: for ~10k stars repositories, this operation is too costly for doing
     # it as part of each analyzer invocation. Move this to the fetcher, and
     # persist the data.

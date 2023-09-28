@@ -255,7 +255,6 @@ def finalize_and_render_report():
 
 
 def run_pandoc(md_report_filepath, html_template_filepath, html_output_filepath):
-
     pandoc_cmd = [
         ARGS.pandoc_command,
         # For allowing raw HTML in Markdown, ref
@@ -390,7 +389,6 @@ def _get_snapshot_time_from_path(p, basename_suffix):
 
 
 def _get_snapshot_dfs(csvpaths, basename_suffix):
-
     snapshot_dfs = []
     column_names_seen = set()
 
@@ -424,7 +422,6 @@ def _get_snapshot_dfs(csvpaths, basename_suffix):
 
 
 def _build_entity_dfs(dfa, entity_type, unique_entity_names):
-
     cmn_ename_prefix = os.path.commonprefix(list(unique_entity_names))
     log.info("_build_entity_dfs. cmn_ename_prefix: %s", cmn_ename_prefix)
     log.info("dfa:\n%s", dfa)
@@ -783,7 +780,6 @@ def analyse_top_x_snapshots(entity_type, date_axis_lim):
 
 
 def analyse_view_clones_ts_fragments() -> pd.DataFrame:
-
     log.info("read views/clones time series fragments (CSV docs)")
 
     basename_suffix = "_views_clones_series_fragment.csv"
@@ -975,7 +971,6 @@ def analyse_view_clones_ts_fragments() -> pd.DataFrame:
     # )
     # agg_fpath = os.path.join(ARGS.snapshotdir, agg_fname)
     if ARGS.views_clones_aggregate_outpath:
-
         if os.path.exists(ARGS.views_clones_aggregate_outpath):
             log.info("file exists: %s", ARGS.views_clones_aggregate_outpath)
             if not ARGS.views_clones_aggregate_inpath:
@@ -1400,7 +1395,6 @@ def symlog_or_lin(df, colname, threshold):
 
 
 def read_stars_over_time_from_csv() -> pd.DataFrame:
-
     if not ARGS.stargazer_ts_inpath:
         log.info("stargazer_ts_inpath not provided, return emtpy df")
         return pd.DataFrame()
@@ -1439,7 +1433,6 @@ def read_stars_over_time_from_csv() -> pd.DataFrame:
 
 
 def read_forks_over_time_from_csv() -> pd.DataFrame:
-
     if not ARGS.fork_ts_inpath:
         log.info("fork_ts_inpath not provided, return emtpy df")
         return pd.DataFrame()

@@ -38,7 +38,6 @@ logging.basicConfig(
 
 
 def main():
-
     parser = argparse.ArgumentParser(description="")
     parser.add_argument(
         "htmlpath",
@@ -70,7 +69,6 @@ def main():
 
 
 def gen_pdf_bytes(html_apath):
-
     wd_options = Options()
     wd_options.add_argument("--headless")
     wd_options.add_argument("--disable-gpu")
@@ -104,7 +102,6 @@ def gen_pdf_bytes(html_apath):
 
 
 def send_print_request(driver):
-
     # Construct chrome dev tools print request.
     # https://chromedevtools.github.io/devtools-protocol/tot/Page/#method-printToPDF
     # Also see https://bugs.chromium.org/p/chromium/issues/detail?id=603559 for

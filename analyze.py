@@ -792,7 +792,7 @@ def analyse_view_clones_ts_fragments() -> pd.DataFrame:
         log.info("attempt to parse %s", p)
         snapshot_time = _get_snapshot_time_from_path(p, basename_suffix)
 
-        df = pd.read_csv(
+        df = pd.read_csv(  # type: ignore
             p,
             index_col=["time_iso8601"],
             date_parser=lambda col: pd.to_datetime(col, utc=True),
@@ -875,11 +875,13 @@ def analyse_view_clones_ts_fragments() -> pd.DataFrame:
     if ARGS.views_clones_aggregate_inpath:
         if os.path.exists(ARGS.views_clones_aggregate_inpath):
             log.info("read previous aggregate: %s", ARGS.views_clones_aggregate_inpath)
-            df_prev_agg = pd.read_csv(
+
+            df_prev_agg = pd.read_csv(  # type: ignore
                 ARGS.views_clones_aggregate_inpath,
                 index_col=["time_iso8601"],
                 date_parser=lambda col: pd.to_datetime(col, utc=True),
             )
+
             df_prev_agg.index.rename("time", inplace=True)
         else:
             log.info(
@@ -1400,11 +1402,13 @@ def read_stars_over_time_from_csv() -> pd.DataFrame:
         return pd.DataFrame()
 
     log.info("Parse stargazer time series (raw) CSV: %s", ARGS.stargazer_ts_inpath)
-    df = pd.read_csv(
+
+    df = pd.read_csv(  # type: ignore
         ARGS.stargazer_ts_inpath,
         index_col=["time_iso8601"],
         date_parser=lambda col: pd.to_datetime(col, utc=True),
     )
+
     # df = df.astype(int)
     df.index.rename("time", inplace=True)
     log.info("stars_cumulative, raw data: %s", df["stars_cumulative"])
@@ -1438,11 +1442,13 @@ def read_forks_over_time_from_csv() -> pd.DataFrame:
         return pd.DataFrame()
 
     log.info("Parse fork time series (raw) CSV: %s", ARGS.fork_ts_inpath)
-    df = pd.read_csv(
+
+    df = pd.read_csv(  # type: ignore
         ARGS.fork_ts_inpath,
         index_col=["time_iso8601"],
         date_parser=lambda col: pd.to_datetime(col, utc=True),
     )
+
     # df = df.astype(int)
     df.index.rename("time", inplace=True)
     log.info("forks_cumulative, raw data: %s", df["forks_cumulative"])

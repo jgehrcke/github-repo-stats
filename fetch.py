@@ -187,8 +187,14 @@ def fetch_and_write_stargazer_ts(repo: Repository.Repository, path: str):
         os.rename(tmppath, snapshots_csv_path)
 
     if current_stargazer_count > 40000:
-        log.info("40k limit crossed; skip (re)fetching entire stargazer timeseries")
-        return
+
+        if os.path.exists(path):
+            log.info("40k limit crossed; skip (re)fetching entire stargazer timeseries")
+            return
+
+        log.info(
+            "40k limit crossed, but %s does not exist yet -- fetch first 40k", path
+        )
 
     dfstarscsv = get_stars_over_time_40k_limit(repo)
     log.info("stars_cumulative, for CSV file:\n%s", dfstarscsv)

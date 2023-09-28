@@ -433,13 +433,19 @@ def handle_rate_limit_error(exc):
         log.warning("GitHub abuse mechanism triggered, wait 60 s, retry")
         return True
 
+    needles_perm_err = [
+        "Resource not accessible by integration",
+        "Must have push access to repository",
+    ]
+
     if "403" in str(exc):
-        if "Resource not accessible by integration" in str(exc):
-            log.error(
-                'this appears to be a permanent error, as in "access denied -- do not retry": %s',
-                str(exc),
-            )
-            sys.exit(1)
+        for needle in needles_perm_err:
+            if needle in str(exc):
+                log.error(
+                    'this appears to be a permanent error, as in "access denied -- do not retry": %s',
+                    str(exc),
+                )
+                sys.exit(1)
 
         log.warning("Exception contains 403, wait 60 s, retry: %s", str(exc))
         # The request count quota is not necessarily responsible for this

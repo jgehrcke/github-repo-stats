@@ -52,6 +52,7 @@ logging.basicConfig(
 
 
 # Get tz-aware datetime object corresponding to invocation time.
+# Note: could do `datetime.now(timezone.utc)` instead these days.
 NOW = pytz.timezone("UTC").localize(datetime.utcnow())
 INVOCATION_TIME_STRING = NOW.strftime("%Y-%m-%d_%H%M%S")
 
@@ -116,7 +117,79 @@ def main() -> None:
 
 
 def fetch_and_write_stargazer_ts(repo: Repository.Repository, path: str):
-    dfstarscsv = get_stars_over_time(repo)
+    # The JSON response to https://api.github.com/repos/<org>/<repo> contains
+    # the current stargazer count, not subject to the 40k limit. Fetching this
+    # periodically allows for building up a stargazer timeseries beyond said
+    # limit. Also see https://github.com/jgehrcke/github-repo-stats/issues/76
+
+    current_stargazer_count = repo.stargazers_count
+    log.info(
+        "current stargazer count as reported by repo properties: %s",
+        current_stargazer_count,
+    )
+
+    # Prepare current snapshot as pandas DataFrame. Will either be
+    # - appended to existing dataset (CSV file existing)
+    # - used to create a fresh dataset (no CSV file existing)
+    # - dropped (CSV file existing, but stargazer count did not change)
+    current_snapshot_df = pd.DataFrame(
+        data={"stargazers_cumulative_snapshot": [current_stargazer_count]},
+        index=pd.to_datetime([NOW.replace(microsecond=0)]),
+    )
+    current_snapshot_df.index.name = "time"
+
+    # Build snapshot CSV file path from the user-given arg for the raw/complete
+    # time series (instead of adding another cmdline arg).
+    root, ext = os.path.splitext(path)
+    snapshots_csv_path = root + "-snapshots" + ext
+    updated_sdf = None
+
+    if os.path.exists(snapshots_csv_path):
+        log.info("read %s", snapshots_csv_path)
+        sdf = pd.read_csv(  # type: ignore
+            snapshots_csv_path,
+            index_col=["time_iso8601"],
+            date_parser=lambda col: pd.to_datetime(col, utc=True),
+        )
+        sdf.index.rename("time", inplace=True)
+        log.info(
+            "stargazers_cumulative_snapshot, raw data from %s:\n%s",
+            snapshots_csv_path,
+            sdf["stargazers_cumulative_snapshot"],
+        )
+
+        if current_stargazer_count == sdf["stargazers_cumulative_snapshot"].iloc[-1]:
+            log.info("current stargazer count matches last snapshot, skip update")
+            # As an optimization, in this case we also do not need to fetch the
+            # complete stargazer timeseries below; and can simply return from
+            # this function
+            return
+
+        else:
+            log.info("stargazer count changed; append snapshot to existing history")
+            updated_sdf = pd.concat([sdf, current_snapshot_df])  # type: ignore
+
+    else:
+        # Data file does not exist yet (first time invocation?). Start building
+        # up this timeseries: create this data file, containing precisely one
+        # data point.
+        log.info("does not exist yet: %s", snapshots_csv_path)
+        updated_sdf = current_snapshot_df
+
+    if updated_sdf is not None:
+        tmppath = snapshots_csv_path + ".tmp"  # todo: rnd string
+        log.info(
+            "write cumulative/snapshot-based stargazer time series to %s, then rename to %s",
+            tmppath,
+            snapshots_csv_path,
+        )
+        updated_sdf.to_csv(tmppath, index_label="time_iso8601")
+        os.rename(tmppath, snapshots_csv_path)
+
+    if current_stargazer_count > 40000:
+        log.info("40k limit crossed; skip (re)fetching entire stargazer timeseries")
+        return
+
     dfstarscsv = get_stars_over_time_40k_limit(repo)
     log.info("stars_cumulative, for CSV file:\n%s", dfstarscsv)
     tpath = path + ".tmp"  # todo: rnd string

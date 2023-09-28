@@ -41,3 +41,7 @@ lint: ci-image
 	docker run -v $(shell pwd):/checkout $(CI_IMAGE) bash -c "flake8 analyze.py fetch.py pdf.py"
 	docker run -v $(shell pwd):/checkout $(CI_IMAGE) bash -c "black --check analyze.py fetch.py pdf.py"
 	docker run -v $(shell pwd):/checkout $(CI_IMAGE) bash -c "mypy analyze.py fetch.py"
+
+.PHONY: black
+black: ci-image
+	docker run -v $(shell pwd):/checkout $(CI_IMAGE) bash -c "black analyze.py fetch.py pdf.py"

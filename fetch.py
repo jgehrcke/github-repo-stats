@@ -144,7 +144,6 @@ def fetch_and_write_fork_ts(repo: Repository.Repository, path: str):
 def fetch_all_traffic_api_endpoints(
     repo,
 ) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
-
     log.info("fetch top referrers")
     df_referrers_snapshot_now = referrers_to_df(fetch_top_referrers(repo))
 
@@ -266,7 +265,6 @@ def referrers_to_df(top_referrers) -> pd.DataFrame:
 
 
 def paths_to_df(top_paths) -> pd.DataFrame:
-
     series_url_paths = []
     series_views_unique = []
     series_views_total = []
@@ -431,7 +429,6 @@ def get_stars_over_time(repo: Repository.Repository) -> pd.DataFrame:
 
 
 def handle_rate_limit_error(exc):
-
     if "wait a few minutes before you try again" in str(exc):
         log.warning("GitHub abuse mechanism triggered, wait 60 s, retry")
         return True

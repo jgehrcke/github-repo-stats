@@ -10,7 +10,7 @@ RUN pip install -r requirements-ci.txt
 # Install bats for running cmdline tests. This is the image used when invoking
 # `make bats-test`.
 RUN git clone https://github.com/bats-core/bats-core.git && cd bats-core && \
-    git checkout v1.5.0 && ./install.sh /usr/local
+    git checkout v1.10.0 && ./install.sh /usr/local
 
 RUN mkdir -p /bats-libraries
 RUN git clone https://github.com/bats-core/bats-support /bats-libraries/bats-support

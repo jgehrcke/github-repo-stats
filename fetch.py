@@ -187,7 +187,6 @@ def fetch_and_write_stargazer_ts(repo: Repository.Repository, path: str):
         os.rename(tmppath, snapshots_csv_path)
 
     if current_stargazer_count > 40000:
-
         if os.path.exists(path):
             log.info("40k limit crossed; skip (re)fetching entire stargazer timeseries")
             return

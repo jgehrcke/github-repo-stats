@@ -1403,19 +1403,19 @@ def read_stars_over_time_from_csv() -> pd.DataFrame:
 
     log.info("Parse (raw) stargazer time series CSV: %s", ARGS.stargazer_ts_inpath)
 
-    df = pd.read_csv(  # type: ignore
+    df_40klim = pd.read_csv(  # type: ignore
         ARGS.stargazer_ts_inpath,
         index_col=["time_iso8601"],
         date_parser=lambda col: pd.to_datetime(col, utc=True),
     )
 
-    # df = df.astype(int)
-    df.index.rename("time", inplace=True)
-    log.info("stars_cumulative, raw data: %s", df["stars_cumulative"])
+    df_40klim.index.rename("time", inplace=True)
+    log.info("stars_cumulative, raw data: %s", df_40klim["stars_cumulative"])
 
-    if not len(df):
+    if not len(df_40klim):
         log.info("CSV file did not contain data, return empty df")
-        return df
+        return df_40klim
+
     # When ending up here: there is at least one stargazer (fast exit above for
     # case 0). Note: the existence of the file `stargazer_ts_snapshot_inpath`
     # does not mean that there are more than 40k stargazers. This makes testing
@@ -1496,7 +1496,7 @@ def read_forks_over_time_from_csv() -> pd.DataFrame:
 
 
 def downsample_series_to_N_points(df, column):
-    # Choose a bin time width for downsampling. Identify tovered timespan
+    # Choose a bin time width for downsampling. Identify covered timespan
     # first.
 
     timespan_hours = int(
@@ -1604,6 +1604,7 @@ def parse_args():
         help="Write resampled stargazer time series to CSV file (at most "
         "one sample per day). No file is created if time series is empty.",
     )
+
     parser.add_argument(
         "--stargazer-ts-inpath",
         default="",

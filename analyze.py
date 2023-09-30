@@ -1397,7 +1397,6 @@ def symlog_or_lin(df, colname, threshold):
 
 
 def read_stars_over_time_from_csv() -> pd.DataFrame:
-
     df_stargazers_complete = pd.DataFrame({"time": [], "stars_cumulative": []})
 
     if not ARGS.stargazer_ts_inpath and not ARGS.stargazer_ts_snapshot_inpath:

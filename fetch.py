@@ -205,7 +205,8 @@ def fetch_and_write_stargazer_ts(repo: Repository.Repository, args):
             return
 
         log.info(
-            "40k limit crossed, but %s does not exist yet -- fetch first 40k", path
+            "40k limit crossed, but %s does not exist yet -- fetch first 40k",
+            args.stargazer_ts_outpath,
         )
 
     dfstarscsv = get_stars_over_time_40k_limit(repo)

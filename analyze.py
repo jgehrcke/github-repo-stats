@@ -1417,8 +1417,8 @@ def read_stars_over_time_from_csv() -> pd.DataFrame:
         return df_40klim
 
     raw_ts_latest_datetime = df_40klim.index[-1]
-    log.info("df_40klim.index: %s", df_40klim.index)
-    log.info("raw_ts_latest_datetime: %s", raw_ts_latest_datetime)
+    # log.info("df_40klim.index: %s", df_40klim.index)
+    # log.info("raw_ts_latest_datetime: %s", raw_ts_latest_datetime)
 
     # Just to reiterate, this is expected to be the 'raw' API-provided
     # timeseries, including each individual stargazer event up to 40k. It may
@@ -1446,9 +1446,11 @@ def read_stars_over_time_from_csv() -> pd.DataFrame:
         # Unsorted input is unlikely, but still.
         df_snapshots_beyond40k.sort_index(inplace=True)
 
+        log.info("stargazer snapshots timeseries:\n%s", df_snapshots_beyond40k)
+
         # Defensive: select only those data points that are newer than those in
         # df_40klim.
-        log.info("df_snapshots_beyond40k.index: %s", df_snapshots_beyond40k.index)
+        # log.info("df_snapshots_beyond40k.index: %s", df_snapshots_beyond40k.index)
         df_snapshots_beyond40k = df_snapshots_beyond40k[
             df_snapshots_beyond40k.index > raw_ts_latest_datetime
         ]

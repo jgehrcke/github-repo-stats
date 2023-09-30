@@ -173,7 +173,7 @@ git status --untracked=no --porcelain
 # Exit code 0 when nothing added
 git add ghrs-data/snapshots
 
-git add ghrs-data/ghrs-data/stargazer-snapshots.csv || echo "failed, ignore"
+git add ghrs-data/stargazer-snapshots.csv || echo "failed, ignore"
 
 # exit code 1 upon 'nothing to commit, working tree clean'
 git commit -m "ghrs: snap ${UPDATE_ID} for ${STATS_REPOSPEC}" || echo "commit failed, ignore (continue)"

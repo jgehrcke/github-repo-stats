@@ -188,9 +188,9 @@ def fetch_and_write_stargazer_ts(repo: Repository.Repository, args):
 
     if updated_sdf is not None:
         tmppath = args.stargazer_ts_snapshots_inoutpath + ".tmp"  # todo: rnd string
-        # The idea here is to write this snapshot-based history before even
-        # before the 40k limit is reached to simplify testing executed for all
-        # repos, not just those unicorn repos).
+        # The idea here is to write the snapshot-based history before the 40k
+        # limit is reached to not have too divergent code paths between types
+        # of repos.
         log.info(
             "write cumulative/snapshot-based stargazer time series to %s, then rename to %s",
             tmppath,

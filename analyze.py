@@ -1397,34 +1397,64 @@ def symlog_or_lin(df, colname, threshold):
 
 
 def read_stars_over_time_from_csv() -> pd.DataFrame:
-    if not ARGS.stargazer_ts_inpath:
+
+    df_stargazers_complete = pd.DataFrame({"time": [], "stars_cumulative": []})
+
+    if not ARGS.stargazer_ts_inpath and not ARGS.stargazer_ts_snapshot_inpath:
         log.info("stargazer_ts_inpath not provided, return emtpy df")
-        return pd.DataFrame()
+        return df_stargazers_complete
 
-    log.info("Parse (raw) stargazer time series CSV: %s", ARGS.stargazer_ts_inpath)
+    raw_ts_latest_datetime = None
 
-    df_40klim = pd.read_csv(  # type: ignore
-        ARGS.stargazer_ts_inpath,
-        index_col=["time_iso8601"],
-        date_parser=lambda col: pd.to_datetime(col, utc=True),
-    )
+    if os.path.exists(ARGS.stargazer_ts_inpath):
+        log.info("Parse (raw) stargazer time series CSV: %s", ARGS.stargazer_ts_inpath)
 
-    df_40klim.index.rename("time", inplace=True)
-    log.info("stars_cumulative, raw data: %s", df_40klim["stars_cumulative"])
+        df_40klim = pd.read_csv(  # type: ignore
+            ARGS.stargazer_ts_inpath,
+            index_col=["time_iso8601"],
+            date_parser=lambda col: pd.to_datetime(col, utc=True),
+        )
 
-    if not len(df_40klim):
-        log.info("CSV file did not contain data, return empty df")
-        return df_40klim
+        df_40klim.index.rename("time", inplace=True)
+        log.info("stars_cumulative, raw data: %s", df_40klim["stars_cumulative"])
 
-    raw_ts_latest_datetime = df_40klim.index[-1]
-    # log.info("df_40klim.index: %s", df_40klim.index)
-    # log.info("raw_ts_latest_datetime: %s", raw_ts_latest_datetime)
+        if not len(df_40klim):
+            log.info("CSV file did not contain data, return empty df")
+            return df_40klim
 
-    # Just to reiterate, this is expected to be the 'raw' API-provided
-    # timeseries, including each individual stargazer event up to 40k. It may
-    # not be reasonable to plot this as-is, depending on density and overall
-    # amount of data points.
-    df_stargazers_complete = df_40klim
+        raw_ts_latest_datetime = df_40klim.index[-1]
+
+        # log.info("df_40klim.index: %s", df_40klim.index)
+        # log.info("raw_ts_latest_datetime: %s", raw_ts_latest_datetime)
+
+        # Just to reiterate, this is expected to be the 'raw' API-provided
+        # timeseries, including each individual stargazer event up to 40k. It may
+        # not be reasonable to plot this as-is, depending on density and overall
+        # amount of data points.
+        df_stargazers_complete = df_40klim
+
+    elif os.path.exists(ARGS.stargazer_ts_resampled_outpath):
+        # This is an interesting tidbit; no 'raw' series was provided, but a
+        # previously written resampled timeseries. Read this, assuming it
+        # reflects a downsampled version of the first 40k stargazers.
+        log.info(
+            "No raw star TS provided. Parse (previously resampled) stargazer time series CSV: %s",
+            ARGS.stargazer_ts_resampled_outpath,
+        )
+        df_resampled = pd.read_csv(  # type: ignore
+            ARGS.stargazer_ts_resampled_outpath,
+            index_col=["time_iso8601"],
+            date_parser=lambda col: pd.to_datetime(col, utc=True),
+        )
+        df_resampled.index.rename("time", inplace=True)
+        log.info(
+            "stars_cumulative, previously resampled: %s",
+            df_resampled["stars_cumulative"],
+        )
+
+        # Here, the variable name becomes misleading.
+        raw_ts_latest_datetime = df_resampled.index[-1]
+        df_stargazers_complete = df_resampled
 
     # When ending up here: there is at least one stargazer (fast exit above for
     # case 0). Note: the existence of the file `stargazer_ts_snapshot_inpath`
@@ -1451,9 +1481,10 @@ def read_stars_over_time_from_csv() -> pd.DataFrame:
         # Defensive: select only those data points that are newer than those in
         # df_40klim.
         # log.info("df_snapshots_beyond40k.index: %s", df_snapshots_beyond40k.index)
-        df_snapshots_beyond40k = df_snapshots_beyond40k[
-            df_snapshots_beyond40k.index > raw_ts_latest_datetime
-        ]
+        if raw_ts_latest_datetime is not None:
+            df_snapshots_beyond40k = df_snapshots_beyond40k[
+                df_snapshots_beyond40k.index > raw_ts_latest_datetime
+            ]
 
         # Is at least one data point left?
         if len(df_snapshots_beyond40k):
@@ -1494,7 +1525,7 @@ def read_stars_over_time_from_csv() -> pd.DataFrame:
     df_stargazers_for_plot = df_stargazers_complete
 
     # Many data points? Downsample, for plotting.
-    if len(df_stargazers_complete) > 50:
+    if len(df_stargazers_for_plot) > 50:
         df_stargazers_for_plot = downsample_series_to_N_points(
             df_stargazers_complete, "stars_cumulative"
         )

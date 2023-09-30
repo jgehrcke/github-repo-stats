@@ -1466,13 +1466,24 @@ def read_stars_over_time_from_csv() -> pd.DataFrame:
                 [df_stargazers_complete, df_snapshots_beyond40k]
             )
             log.info("concat result:\n%s", df_stargazers_complete)
+
+    # Make the stargazer timeseries that is going to be persisted via git
+    # contain data from both, the raw timeseries (obtained from API) as well as
+    # from the snapshots obtained so far; but downsample to at most one data
+    # point per day. Note that this is for external usage, not used for GHRS.
     if ARGS.stargazer_ts_resampled_outpath:
         # The CSV file should contain integers after all (no ".0"), therefore
         # cast to int. There are no NaNs to be expected, i.e. this should work
         # reliably.
-        df_for_csv_file = resample_to_1d_resolution(df, "stars_cumulative").astype(int)
-        log.info("stars_cumulative, for CSV file (resampled): %s", df_for_csv_file)
+        df_for_csv_file = resample_to_1d_resolution(
+            df_stargazers_complete, "stars_cumulative"
+        ).astype(int)
+        log.info(
+            "stars_cumulative, for CSV file (resampled, from raw+snapshots): %s",
+            df_for_csv_file,
+        )
         log.info("write aggregate to %s", ARGS.stargazer_ts_resampled_outpath)
+
         # Pragmatic strategy against partial write / encoding problems.
         tpath = ARGS.stargazer_ts_resampled_outpath + ".tmp"
         df_for_csv_file.to_csv(tpath, index_label="time_iso8601")

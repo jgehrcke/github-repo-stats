@@ -111,12 +111,12 @@ def main() -> None:
         fetch_and_write_fork_ts(repo, args.fork_ts_outpath)
 
     if args.stargazer_ts_outpath:
-        fetch_and_write_stargazer_ts(repo, args.stargazer_ts_outpath)
+        fetch_and_write_stargazer_ts(repo, args)
 
     log.info("done!")
 
 
-def fetch_and_write_stargazer_ts(repo: Repository.Repository, path: str):
+def fetch_and_write_stargazer_ts(repo: Repository.Repository, args):
     """
     Fetch the complete stargazer timeseries as provided by the GitHub HTTP API.
 
@@ -151,23 +151,19 @@ def fetch_and_write_stargazer_ts(repo: Repository.Repository, path: str):
     )
     current_snapshot_df.index.name = "time"
 
-    # Pragmatic change; instead of adding another cmdline arg, hardcode this
-    # path for now.
-    # root, ext = os.path.splitext(path)
-    snapshots_csv_path = "stargazer-snapshots.csv"
     updated_sdf = None
 
-    if os.path.exists(snapshots_csv_path):
-        log.info("read %s", snapshots_csv_path)
+    if os.path.exists(args.stargazer_ts_snapshots_inoutpath):
+        log.info("read %s", args.stargazer_ts_snapshots_inoutpath)
         sdf = pd.read_csv(  # type: ignore
-            snapshots_csv_path,
+            args.stargazer_ts_snapshots_inoutpath,
             index_col=["time_iso8601"],
             date_parser=lambda col: pd.to_datetime(col, utc=True),
         )
         sdf.index.rename("time", inplace=True)
         log.info(
             "stargazers_cumulative_snapshot, raw data from %s:\n%s",
-            snapshots_csv_path,
+            args.stargazer_ts_snapshots_inoutpath,
             sdf["stargazers_cumulative_snapshot"],
         )
 
@@ -187,24 +183,24 @@ def fetch_and_write_stargazer_ts(repo: Repository.Repository, path: str):
         # up this timeseries: create this data file, containing precisely one
         # data point. I hope this is an integer for the special case of 0/zero
         # stargazers.
-        log.info("does not exist yet: %s", snapshots_csv_path)
+        log.info("does not exist yet: %s", args.stargazer_ts_snapshots_inoutpath)
         updated_sdf = current_snapshot_df
 
     if updated_sdf is not None:
-        tmppath = snapshots_csv_path + ".tmp"  # todo: rnd string
+        tmppath = args.stargazer_ts_snapshots_inoutpath + ".tmp"  # todo: rnd string
         # The idea here is to write this snapshot-based history before even
         # before the 40k limit is reached to simplify testing executed for all
         # repos, not just those unicorn repos).
         log.info(
             "write cumulative/snapshot-based stargazer time series to %s, then rename to %s",
             tmppath,
-            snapshots_csv_path,
+            args.stargazer_ts_snapshots_inoutpath,
         )
         updated_sdf.to_csv(tmppath, index_label="time_iso8601")
-        os.rename(tmppath, snapshots_csv_path)
+        os.rename(tmppath, args.stargazer_ts_snapshots_inoutpath)
 
     if current_stargazer_count > 40000:
-        if os.path.exists(path):
+        if os.path.exists(args.stargazer_ts_outpath):
             log.info("40k limit crossed; skip (re)fetching entire stargazer timeseries")
             return
 
@@ -214,14 +210,14 @@ def fetch_and_write_stargazer_ts(repo: Repository.Repository, path: str):
 
     dfstarscsv = get_stars_over_time_40k_limit(repo)
     log.info("stars_cumulative, for CSV file:\n%s", dfstarscsv)
-    tpath = path + ".tmp"  # todo: rnd string
+    tpath = args.stargazer_ts_outpath + ".tmp"  # todo: rnd string
     log.info(
         "write stargazer time series to %s, then rename to %s",
         tpath,
-        path,
+        args.stargazer_ts_outpath,
     )
     dfstarscsv.to_csv(tpath, index_label="time_iso8601")
-    os.rename(tpath, path)
+    os.rename(tpath, args.stargazer_ts_outpath)
 
 
 def fetch_and_write_fork_ts(repo: Repository.Repository, path: str):
@@ -302,6 +298,14 @@ def parse_args():
         default="",
         metavar="PATH",
         help="Fetch stargazer time series and write to this CSV file. Overwrite if file exists.",
+    )
+
+    # TODO: make this required
+    parser.add_argument(
+        "--stargazer-ts-snapshots-inoutpath",
+        default="",
+        metavar="PATH",
+        help="read/write stargazer time series snapshots, overwrite (append to) file if exists",
     )
 
     args = parser.parse_args()

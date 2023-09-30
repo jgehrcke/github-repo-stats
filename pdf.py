@@ -24,6 +24,7 @@ import time
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.expected_conditions import presence_of_element_located
@@ -78,7 +79,7 @@ def gen_pdf_bytes(html_apath):
     log.info("set up chromedriver with capabilities %s", wd_options.to_capabilities())
 
     with webdriver.Chrome(
-        ChromeDriverManager().install(), options=wd_options
+        service=Service(ChromeDriverManager().install()), options=wd_options
     ) as driver:
         log.info("webdriver set up")
         waiter = WebDriverWait(driver, 10)

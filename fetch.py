@@ -117,6 +117,19 @@ def main() -> None:
 
 
 def fetch_and_write_stargazer_ts(repo: Repository.Repository, path: str):
+    """
+    Fetch the complete stargazer timeseries as provided by the GitHub HTTP API.
+
+    Remarks:
+
+    - Each stargazer is represented ("raw" timeseries), analzye.py downsamples
+      to one datapoint per day (this is the timeseries one that is persisted
+      via git, not the "raw" one).
+    - Only the first 40k stargazers are represented; we assemble additional
+      history based on periodically obtained snapshots.
+
+    Idea: fetch both.
+    """
     # The JSON response to https://api.github.com/repos/<org>/<repo> contains
     # the current stargazer count, not subject to the 40k limit. Fetching this
     # periodically allows for building up a stargazer timeseries beyond said
@@ -138,10 +151,10 @@ def fetch_and_write_stargazer_ts(repo: Repository.Repository, path: str):
     )
     current_snapshot_df.index.name = "time"
 
-    # Build snapshot CSV file path from the user-given arg for the raw/complete
-    # time series (instead of adding another cmdline arg).
-    root, ext = os.path.splitext(path)
-    snapshots_csv_path = root + "-snapshots" + ext
+    # Pragmatic change; instead of adding another cmdline arg, hardcode this
+    # path for now.
+    # root, ext = os.path.splitext(path)
+    snapshots_csv_path = "stargazer-snapshots.csv"
     updated_sdf = None
 
     if os.path.exists(snapshots_csv_path):
@@ -172,12 +185,16 @@ def fetch_and_write_stargazer_ts(repo: Repository.Repository, path: str):
     else:
         # Data file does not exist yet (first time invocation?). Start building
         # up this timeseries: create this data file, containing precisely one
-        # data point.
+        # data point. I hope this is an integer for the special case of 0/zero
+        # stargazers.
         log.info("does not exist yet: %s", snapshots_csv_path)
         updated_sdf = current_snapshot_df
 
     if updated_sdf is not None:
         tmppath = snapshots_csv_path + ".tmp"  # todo: rnd string
+        # The idea here is to write this snapshot-based history before even
+        # before the 40k limit is reached to simplify testing executed for all
+        # repos, not just those unicorn repos).
         log.info(
             "write cumulative/snapshot-based stargazer time series to %s, then rename to %s",
             tmppath,

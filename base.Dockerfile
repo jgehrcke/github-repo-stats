@@ -8,13 +8,13 @@ RUN apt-get update && apt-get install -y -q --no-install-recommends \
         google-chrome-stable \
     && rm -rf /var/lib/apt/lists/*
 
-RUN pip install pip==22.1
+RUN pip install pip==23.2.1
 
 # requirements-fa.txt: dependencies for fetch.py & analyze.py
 # for pdf.py: Note Explore bumping selenium to 4.x
 COPY requirements-fa.txt .
 RUN pip install -r requirements-fa.txt \
-    && pip install selenium==3.141.0 webdriver_manager==3.5.2 #  Dependencies for pdf.py \
+    && pip install selenium==4.13.0 webdriver_manager==4.0.1 #  Dependencies for pdf.py \
     && pip cache purge
 
 RUN echo "biggest dirs"

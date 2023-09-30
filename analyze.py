@@ -1401,7 +1401,7 @@ def read_stars_over_time_from_csv() -> pd.DataFrame:
         log.info("stargazer_ts_inpath not provided, return emtpy df")
         return pd.DataFrame()
 
-    log.info("Parse stargazer time series (raw) CSV: %s", ARGS.stargazer_ts_inpath)
+    log.info("Parse (raw) stargazer time series CSV: %s", ARGS.stargazer_ts_inpath)
 
     df = pd.read_csv(  # type: ignore
         ARGS.stargazer_ts_inpath,
@@ -1416,6 +1416,25 @@ def read_stars_over_time_from_csv() -> pd.DataFrame:
     if not len(df):
         log.info("CSV file did not contain data, return empty df")
         return df
+    # When ending up here: there is at least one stargazer (fast exit above for
+    # case 0). Note: the existence of the file `stargazer_ts_snapshot_inpath`
+    # does not mean that there are more than 40k stargazers. This makes testing
+    # more credible: execute this code path often.
+    if os.path.exists(ARGS.stargazer_ts_snapshot_inpath):
+        log.info(
+            "Parse (snapshot) stargazer time series CSV: %s",
+            ARGS.stargazer_ts_snapshot_inpath,
+        )
+
+        df_snapshots_beyond40k = pd.read_csv(  # type: ignore
+            ARGS.stargazer_ts_snapshot_inpath,
+            index_col=["time_iso8601"],
+            date_parser=lambda col: pd.to_datetime(col, utc=True),
+        )
+        df_snapshots_beyond40k.index.rename("time", inplace=True)
+
+        # Unsorted input is unlikely, but still.
+        df_snapshots_beyond40k.sort_index(inplace=True)
 
     if ARGS.stargazer_ts_resampled_outpath:
         # The CSV file should contain integers after all (no ".0"), therefore
@@ -1590,6 +1609,14 @@ def parse_args():
         default="",
         metavar="PATH",
         help="Read raw stargazer time series from CSV file. File must exist, may be empty.",
+    )
+
+    parser.add_argument(
+        "--stargazer-ts-snapshot-inpath",
+        default="",
+        metavar="PATH",
+        help="Read snapshot-based stargazer time series from CSV file "
+        "(helps accounting for the 40k limit). File not required to exist. ",
     )
 
     parser.add_argument(

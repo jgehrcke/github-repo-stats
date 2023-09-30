@@ -188,6 +188,7 @@ python "${GHRS_FILES_ROOT_PATH}/analyze.py" \
     --output-directory latest-report \
     --outfile-prefix "" \
     --stargazer-ts-inpath "stars-raw.csv" \
+    --stargazer-ts-snapshot-inpath "ghrs-data/stargazer-snapshots.csv" \
     --fork-ts-inpath "forks-raw.csv" \
     --stargazer-ts-resampled-outpath "ghrs-data/stargazers.csv" \
     --fork-ts-resampled-outpath "ghrs-data/forks.csv" \

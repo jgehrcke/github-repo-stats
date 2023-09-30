@@ -1489,11 +1489,16 @@ def read_stars_over_time_from_csv() -> pd.DataFrame:
         df_for_csv_file.to_csv(tpath, index_label="time_iso8601")
         os.rename(tpath, ARGS.stargazer_ts_resampled_outpath)
 
-    # Many data points? Downsample, for plotting.
-    if len(df) > 50:
-        df = downsample_series_to_N_points(df, "stars_cumulative")
+    df_stargazers_for_plot = df_stargazers_complete
 
-    return df
+    # Many data points? Downsample, for plotting.
+    if len(df_stargazers_complete) > 50:
+        df_stargazers_for_plot = downsample_series_to_N_points(
+            df_stargazers_complete, "stars_cumulative"
+        )
+
+    log.info("df_stargazers_for_plot:\n%s", df_stargazers_for_plot)
+    return df_stargazers_for_plot
 
 
 def read_forks_over_time_from_csv() -> pd.DataFrame:

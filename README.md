@@ -1,8 +1,12 @@
 # github-repo-stats
 
-A GitHub Action ([in Marketplace](https://github.com/marketplace/actions/github-repo-stats)) built to overcome the [14-day limitation](https://github.com/isaacs/github/issues/399) of GitHub's built-in traffic statistics.
+This is a GitHub Action originally built to overcome the [14-day limitation](https://github.com/isaacs/github/issues/399) of GitHub's built-in traffic statistics.
 
-Data that you don't persist today will be gone in two weeks from now.
+Run this daily to collect potentially valuable data.
+
+According to the motto: a data snapshot each day keeps the doctor away 🍎
+
+See [this Action in Marketplace](https://github.com/marketplace/actions/github-repo-stats).
 
 High-level method description:
 
@@ -16,11 +20,13 @@ Looking for a quick start? Follow the [simple tutorial](https://github.com/jgehr
 
 **Demo 1**:
 * [HTML report](https://jgehrcke.github.io/ghrs-test/jgehrcke/github-repo-stats/latest-report/report.html), [PDF report](https://jgehrcke.github.io/ghrs-test/jgehrcke/github-repo-stats/latest-report/report.pdf)
-* [Workflow file](https://github.com/jgehrcke/ghrs-test/blob/github-repo-stats/.github/workflows/github-repo-stats.yml), [data branch](https://github.com/jgehrcke/ghrs-test/tree/github-repo-stats/jgehrcke/github-repo-stats)
+* [Workflow file](https://github.com/jgehrcke/ghrs-test/blob/github-repo-stats/.github/workflows/github-repo-stats-ghrs.yml), [data branch](https://github.com/jgehrcke/ghrs-test/tree/github-repo-stats/jgehrcke/github-repo-stats)
 
 **Demo 2**:
 * [HTML report](https://jgehrcke.github.io/ghrs-test/jgehrcke/covid-19-germany-gae/latest-report/report.html), [PDF report](https://jgehrcke.github.io/ghrs-test/jgehrcke/covid-19-germany-gae/latest-report/report.pdf)
-* [Workflow file](https://github.com/jgehrcke/ghrs-test/blob/covid-19-germany-gae/.github/workflows/github-repo-stats.yml), [data branch](https://github.com/jgehrcke/ghrs-test/tree/covid-19-germany-gae/jgehrcke/github-repo-stats)
+* [Workflow file](https://github.com/jgehrcke/ghrs-test/blob/github-repo-stats/.github/workflows/github-repo-stats-cov19.yml), [data branch](https://github.com/jgehrcke/ghrs-test/tree/github-repo-stats/jgehrcke/github-repo-stats)
+
+For more use cases (and their setup), see "Used by" section below.
 
 ## Highlights
 
@@ -237,10 +243,15 @@ rm -rf .* *; bash /home/jp/dev/github-repo-stats/entrypoint.sh
 
 A few rather randomly picked use cases:
 
+
+* https://github.com/idurar/erp-crm/tree/github-repo-stats/idurar/idurar-erp-crm
+* https://github.com/awslabs/aws-security-analytics-bootstrap/tree/github-repo-stats/awslabs/aws-security-analytics-bootstrap
+* https://github.com/centerofci/mathesar/tree/github-repo-stats/centerofci/mathesar
+* https://github.com/carbon-design-system/carbon/tree/github-repo-stats/carbon-design-system/carbon
+* https://github.com/Pythagora-io/pythagora/tree/github-repo-stats/Pythagora-io/pythagora
 * https://github.com/ignite-hq/cli/tree/github-repo-stats/ignite-hq/cli
 * https://github.com/tom-doerr/github_repo_stats_data/tree/master/tom-doerr
 * https://github.com/ethyca/fides-stats/tree/main/ethyca/fides
 * https://github.com/dylansdaniels/hnn_tracking_test/tree/main/jonescompneurolab/hnn
 * https://github.com/idaholab/repository-statistics/tree/main/idaholab
 * https://github.com/Declipsonator/Tweaks-Stats/tree/main/Declipsonator/Meteor-Tweaks
-* https://github.com/gitsrc/icefiredb-status/tree/github-repo-stats/IceFireDB/IceFireDB

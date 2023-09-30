@@ -1416,6 +1416,16 @@ def read_stars_over_time_from_csv() -> pd.DataFrame:
         log.info("CSV file did not contain data, return empty df")
         return df_40klim
 
+    raw_ts_latest_datetime = df_40klim.index[-1]
+    log.info("df_40klim.index: %s", df_40klim.index)
+    log.info("raw_ts_latest_datetime: %s", raw_ts_latest_datetime)
+
+    # Just to reiterate, this is expected to be the 'raw' API-provided
+    # timeseries, including each individual stargazer event up to 40k. It may
+    # not be reasonable to plot this as-is, depending on density and overall
+    # amount of data points.
+    df_stargazers_complete = df_40klim
+
     # When ending up here: there is at least one stargazer (fast exit above for
     # case 0). Note: the existence of the file `stargazer_ts_snapshot_inpath`
     # does not mean that there are more than 40k stargazers. This makes testing
@@ -1436,6 +1446,26 @@ def read_stars_over_time_from_csv() -> pd.DataFrame:
         # Unsorted input is unlikely, but still.
         df_snapshots_beyond40k.sort_index(inplace=True)
 
+        # Defensive: select only those data points that are newer than those in
+        # df_40klim.
+        log.info("df_snapshots_beyond40k.index: %s", df_snapshots_beyond40k.index)
+        df_snapshots_beyond40k = df_snapshots_beyond40k[
+            df_snapshots_beyond40k.index > raw_ts_latest_datetime
+        ]
+
+        # Is at least one data point left?
+        if len(df_snapshots_beyond40k):
+            # Concatenate with 'raw' timeseries, along the same column.
+            df_snapshots_beyond40k.rename(
+                columns={"stargazers_cumulative_snapshot": "stars_cumulative"},
+                inplace=True,
+            )
+
+            # On purpose: overwrite object defined above.
+            df_stargazers_complete = pd.concat(  # type: ignore
+                [df_stargazers_complete, df_snapshots_beyond40k]
+            )
+            log.info("concat result:\n%s", df_stargazers_complete)
     if ARGS.stargazer_ts_resampled_outpath:
         # The CSV file should contain integers after all (no ".0"), therefore
         # cast to int. There are no NaNs to be expected, i.e. this should work

@@ -52,6 +52,7 @@ logging.basicConfig(
 
 
 # Get tz-aware datetime object corresponding to invocation time.
+# Note: could do `datetime.now(timezone.utc)` instead these days.
 NOW = pytz.timezone("UTC").localize(datetime.utcnow())
 INVOCATION_TIME_STRING = NOW.strftime("%Y-%m-%d_%H%M%S")
 
@@ -110,22 +111,114 @@ def main() -> None:
         fetch_and_write_fork_ts(repo, args.fork_ts_outpath)
 
     if args.stargazer_ts_outpath:
-        fetch_and_write_stargazer_ts(repo, args.stargazer_ts_outpath)
+        fetch_and_write_stargazer_ts(repo, args)
 
     log.info("done!")
 
 
-def fetch_and_write_stargazer_ts(repo: Repository.Repository, path: str):
-    dfstarscsv = get_stars_over_time(repo)
+def fetch_and_write_stargazer_ts(repo: Repository.Repository, args):
+    """
+    Fetch the complete stargazer timeseries as provided by the GitHub HTTP API.
+
+    Remarks:
+
+    - Each stargazer is represented ("raw" timeseries), analzye.py downsamples
+      to one datapoint per day (this is the timeseries one that is persisted
+      via git, not the "raw" one).
+    - Only the first 40k stargazers are represented; we assemble additional
+      history based on periodically obtained snapshots.
+
+    Idea: fetch both.
+    """
+    # The JSON response to https://api.github.com/repos/<org>/<repo> contains
+    # the current stargazer count, not subject to the 40k limit. Fetching this
+    # periodically allows for building up a stargazer timeseries beyond said
+    # limit. Also see https://github.com/jgehrcke/github-repo-stats/issues/76
+
+    current_stargazer_count = repo.stargazers_count
+    log.info(
+        "current stargazer count as reported by repo properties: %s",
+        current_stargazer_count,
+    )
+
+    # Prepare current snapshot as pandas DataFrame. Will either be
+    # - appended to existing dataset (CSV file existing)
+    # - used to create a fresh dataset (no CSV file existing)
+    # - dropped (CSV file existing, but stargazer count did not change)
+    current_snapshot_df = pd.DataFrame(
+        data={"stargazers_cumulative_snapshot": [current_stargazer_count]},
+        index=pd.to_datetime([NOW.replace(microsecond=0)]),
+    )
+    current_snapshot_df.index.name = "time"
+
+    updated_sdf = None
+
+    if os.path.exists(args.stargazer_ts_snapshots_inoutpath):
+        log.info("read %s", args.stargazer_ts_snapshots_inoutpath)
+        sdf = pd.read_csv(  # type: ignore
+            args.stargazer_ts_snapshots_inoutpath,
+            index_col=["time_iso8601"],
+            date_parser=lambda col: pd.to_datetime(col, utc=True),
+        )
+        sdf.index.rename("time", inplace=True)
+        log.info(
+            "stargazers_cumulative_snapshot, raw data from %s:\n%s",
+            args.stargazer_ts_snapshots_inoutpath,
+            sdf["stargazers_cumulative_snapshot"],
+        )
+
+        if current_stargazer_count == sdf["stargazers_cumulative_snapshot"].iloc[-1]:
+            log.info("current stargazer count matches last snapshot, skip update")
+            # As an optimization, in this case we also do not need to fetch the
+            # complete stargazer timeseries below; and can simply return from
+            # this function
+            return
+
+        else:
+            log.info("stargazer count changed; append snapshot to existing history")
+            updated_sdf = pd.concat([sdf, current_snapshot_df])  # type: ignore
+
+    else:
+        # Data file does not exist yet (first time invocation?). Start building
+        # up this timeseries: create this data file, containing precisely one
+        # data point. I hope this is an integer for the special case of 0/zero
+        # stargazers.
+        log.info("does not exist yet: %s", args.stargazer_ts_snapshots_inoutpath)
+        updated_sdf = current_snapshot_df
+
+    if updated_sdf is not None:
+        tmppath = args.stargazer_ts_snapshots_inoutpath + ".tmp"  # todo: rnd string
+        # The idea here is to write the snapshot-based history before the 40k
+        # limit is reached to not have too divergent code paths between types
+        # of repos.
+        log.info(
+            "write cumulative/snapshot-based stargazer time series to %s, then rename to %s",
+            tmppath,
+            args.stargazer_ts_snapshots_inoutpath,
+        )
+        updated_sdf.to_csv(tmppath, index_label="time_iso8601")
+        os.rename(tmppath, args.stargazer_ts_snapshots_inoutpath)
+
+    if current_stargazer_count > 40000:
+        if os.path.exists(args.stargazer_ts_outpath):
+            log.info("40k limit crossed; skip (re)fetching entire stargazer timeseries")
+            return
+
+        log.info(
+            "40k limit crossed, but %s does not exist yet -- fetch first 40k",
+            args.stargazer_ts_outpath,
+        )
+
+    dfstarscsv = get_stars_over_time_40k_limit(repo)
     log.info("stars_cumulative, for CSV file:\n%s", dfstarscsv)
-    tpath = path + ".tmp"  # todo: rnd string
+    tpath = args.stargazer_ts_outpath + ".tmp"  # todo: rnd string
     log.info(
         "write stargazer time series to %s, then rename to %s",
         tpath,
-        path,
+        args.stargazer_ts_outpath,
     )
     dfstarscsv.to_csv(tpath, index_label="time_iso8601")
-    os.rename(tpath, path)
+    os.rename(tpath, args.stargazer_ts_outpath)
 
 
 def fetch_and_write_fork_ts(repo: Repository.Repository, path: str):
@@ -206,6 +299,14 @@ def parse_args():
         default="",
         metavar="PATH",
         help="Fetch stargazer time series and write to this CSV file. Overwrite if file exists.",
+    )
+
+    # TODO: make this required
+    parser.add_argument(
+        "--stargazer-ts-snapshots-inoutpath",
+        default="",
+        metavar="PATH",
+        help="read/write stargazer time series snapshots, overwrite (append to) file if exists",
     )
 
     args = parser.parse_args()
@@ -364,7 +465,12 @@ def get_forks_over_time(repo: Repository.Repository) -> pd.DataFrame:
     return df
 
 
-def get_stars_over_time(repo: Repository.Repository) -> pd.DataFrame:
+def get_stars_over_time_40k_limit(repo: Repository.Repository) -> pd.DataFrame:
+    """
+    Fetch stargazer-over-time from beginning of time. This returns at most
+    the oldest 40.000 stargazers (a GitHub HTTP API limitation, see
+    https://github.com/jgehrcke/github-repo-stats/issues/76).
+    """
     # TODO: for ~10k stars repositories, this operation is too costly for doing
     # it as part of each analyzer invocation. Move this to the fetcher, and
     # persist the data.
@@ -433,13 +539,19 @@ def handle_rate_limit_error(exc):
         log.warning("GitHub abuse mechanism triggered, wait 60 s, retry")
         return True
 
+    needles_perm_err = [
+        "Resource not accessible by integration",
+        "Must have push access to repository",
+    ]
+
     if "403" in str(exc):
-        if "Resource not accessible by integration" in str(exc):
-            log.error(
-                'this appears to be a permanent error, as in "access denied -- do not retry": %s',
-                str(exc),
-            )
-            sys.exit(1)
+        for needle in needles_perm_err:
+            if needle in str(exc):
+                log.error(
+                    'this appears to be a permanent error, as in "access denied -- do not retry": %s',
+                    str(exc),
+                )
+                sys.exit(1)
 
         log.warning("Exception contains 403, wait 60 s, retry: %s", str(exc))
         # The request count quota is not necessarily responsible for this

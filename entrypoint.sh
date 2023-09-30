@@ -134,7 +134,6 @@ echo "fetch.py for ${STATS_REPOSPEC}"
 # reduce the likelihood for bad order of log lines in the GH Action log viewer
 # (seen `error: fetch.py returned with code 1 -- exit.` before the last line of
 # the CPython stderr stream was shown.)
-
 export PYTHONUNBUFFERED="on"
 
 set +e
@@ -145,7 +144,8 @@ set -x
 python "${GHRS_FILES_ROOT_PATH}/fetch.py" "${STATS_REPOSPEC}" \
     --snapshot-directory=newsnapshots \
     --fork-ts-outpath=forks-raw.csv \
-    --stargazer-ts-outpath=stars-raw.csv
+    --stargazer-ts-outpath=stars-raw.csv \
+    --stargazer-ts-snapshots-inoutpath=ghrs-data/stargazer-snapshots.csv
 FETCH_ECODE=$?
 set +x
 set -e
@@ -167,11 +167,13 @@ set -x
 mkdir -p ghrs-data/snapshots
 cp -a newsnapshots/* ghrs-data/snapshots || echo "copy failed, ignore (continue)"
 
-# New data files: show them from git's point of view.
+# New/updated data files: show them from git's point of view.
 git status --untracked=no --porcelain
 
-# exit code 0 when nothing added
+# Exit code 0 when nothing added
 git add ghrs-data/snapshots
+
+git add ghrs-data/stargazer-snapshots.csv || echo "failed, ignore"
 
 # exit code 1 upon 'nothing to commit, working tree clean'
 git commit -m "ghrs: snap ${UPDATE_ID} for ${STATS_REPOSPEC}" || echo "commit failed, ignore (continue)"
@@ -188,6 +190,7 @@ python "${GHRS_FILES_ROOT_PATH}/analyze.py" \
     --output-directory latest-report \
     --outfile-prefix "" \
     --stargazer-ts-inpath "stars-raw.csv" \
+    --stargazer-ts-snapshot-inpath "ghrs-data/stargazer-snapshots.csv" \
     --fork-ts-inpath "forks-raw.csv" \
     --stargazer-ts-resampled-outpath "ghrs-data/stargazers.csv" \
     --fork-ts-resampled-outpath "ghrs-data/forks.csv" \

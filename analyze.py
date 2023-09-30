@@ -1573,7 +1573,9 @@ def downsample_series_to_N_points(df, column):
     # up-sampled data points (so that each data point still reflects an actual
     # event or a group of events, but when there was no event within a bin then
     # that bin does not appear with a data point in the resulting plot).
-    s = s.resample(f"{bin_width_hours}h").max().dropna()
+    # The resample operation might put the last data point into the future,
+    # Let's correct for that by putting origin="end".
+    s = s.resample(f"{bin_width_hours}h", origin="end").max().dropna()
 
     log.info("len(series): %s", len(s))
 

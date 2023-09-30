@@ -1,4 +1,4 @@
-FROM jgehrcke/github-repo-stats-base:6e6c3e4f8
+FROM jgehrcke/github-repo-stats-base:e87aa5891
 
 # Install GNU parallel
 RUN apt-get update && apt-get install -y -q --no-install-recommends \

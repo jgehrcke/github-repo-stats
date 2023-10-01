@@ -83,7 +83,7 @@ def main() -> None:
     parse_args()
     configure_altair()
 
-    df_stargazers = read_stars_over_time_from_csv()
+    df_stargazers = process_stargazer_input()
     df_forks = read_forks_over_time_from_csv()
 
     gen_report_preamble()
@@ -1383,7 +1383,16 @@ def add_fork_section(
 
 
 def symlog_or_lin(df, colname, threshold):
-    # TODO: decide between 'linear' and 'symlog' axis based on the value range
+    """
+    This is not a silver bullet solution so far, might show symlog scale where
+    linear would be nicer.
+
+    The main idea of using symlog is to not lose resolution around smaller
+    values given the presence of visitor spikes/peaks.
+
+    A half-decent algorithm to make the decision should look more closely at
+    the distribution of values, not only at min and max.
+    """
     rmin = df[colname].min()
     rmax = df[colname].max()
     log.info(f"df[{colname}] min: {rmin}, max: {rmax}")
@@ -1396,48 +1405,102 @@ def symlog_or_lin(df, colname, threshold):
     return "linear"
 
 
-def read_stars_over_time_from_csv() -> pd.DataFrame:
-    df_stargazers_complete = pd.DataFrame({"time": [], "stars_cumulative": []})
+def process_stargazer_input() -> pd.DataFrame:
+    """
+    Read stargazer data. Return dataframe to plot. Conditionally, (re-)write
+    "resampled" stargazer timeseries for persistence in git.
+
+    This has grown a bit chaotic in terms of requirements.
+
+    The current design I think is / should be something like this:
+
+    Do not require anything (do not treat missing data 'fatal') but try to read
+    anything that's available and try to make sense of it.
+
+    There are three sources:
+
+    1) "raw": each stargazer event, limited to first 40 k. History may be
+       re-written I think (data points from the past may change, I think (when
+       a stargazer stops being a stargazer)
+    2) "snapshots": the sum of stargazers, as seen by GHRS, at specific points
+       in time. This history may not be re-written.
+    3) "resampled": a previous down-sampled variant of 1+2, which when combined
+       with an updated version of (2) may yield the current version of (3).
+
+    Behavior:
+
+    - Do work only when either (1) or (2) is provided. That is consistent with
+      the idea that 'resampled' (3) is not directly meant as input for
+      plotting.
+
+    Treat permutations along the following cases:
+
+    - "raw": yes/no
+    - "snapshots": yes/no
+    - "resampled": yes/no
+
+       raw, snpshts, resampled | do work  read rs  rebuild rs
+       ----------------------- | -------------------------------------------
+    1  (True, True, True),     |  x       no       x (fresh build)
+    2  (True, True, False),    |  x       no       x (fresh build)
+    3  (True, False, True),    |  x       no       x (fresh build)
+    4  (True, False, False),   |  x       no       x (fresh build)
+    5  (False, True, True),    |  x       x        x (from previous, danger)
+    6  (False, True, False),   |  x       no       no (just snapshots good enough)
+    7  (False, False, True),   |  no
+    8  (False, False, False)   |  no
+
+    - no input data
+    - only raw series
+    - only snapshots
+
+
+
+
+    """
+    df_result = pd.DataFrame({"time": [], "stars_cumulative": []})
 
     if not ARGS.stargazer_ts_inpath and not ARGS.stargazer_ts_snapshot_inpath:
-        log.info("stargazer_ts_inpath not provided, return emtpy df")
-        return df_stargazers_complete
+        # Cases 7 and 8.
+        log.info(
+            "stargazer_ts_inpath, stargazer_ts_snapshot_inpath not provided: terminate stargazer processing"
+        )
+        return df_result
 
-    raw_ts_latest_datetime = None
+    previous_ts_latest_datetime = None
 
     if os.path.exists(ARGS.stargazer_ts_inpath):
         log.info("Parse (raw) stargazer time series CSV: %s", ARGS.stargazer_ts_inpath)
 
-        df_40klim = pd.read_csv(  # type: ignore
+        df_raw = pd.read_csv(  # type: ignore
             ARGS.stargazer_ts_inpath,
             index_col=["time_iso8601"],
             date_parser=lambda col: pd.to_datetime(col, utc=True),
         )
+        df_raw.index.rename("time", inplace=True)
+        log.info("stars_cumulative, raw ts: %s", df_raw["stars_cumulative"])
 
-        df_40klim.index.rename("time", inplace=True)
-        log.info("stars_cumulative, raw data: %s", df_40klim["stars_cumulative"])
+        if not len(df_raw):
+            # Special case: no stargazers yet, the expected case for first
+            # invocation for 0-stargazer repo (I think). Return empty
+            # dataframe.
+            log.info("no data: terminate stargazer processing")
+            return df_result
 
-        if not len(df_40klim):
-            log.info("CSV file did not contain data, return empty df")
-            return df_40klim
-
-        raw_ts_latest_datetime = df_40klim.index[-1]
-
-        # log.info("df_40klim.index: %s", df_40klim.index)
-        # log.info("raw_ts_latest_datetime: %s", raw_ts_latest_datetime)
-
+        previous_ts_latest_datetime = df_raw.index[-1]
         # Just to reiterate, this is expected to be the 'raw' API-provided
-        # timeseries, including each individual stargazer event up to 40k. It may
-        # not be reasonable to plot this as-is, depending on density and overall
-        # amount of data points.
-        df_stargazers_complete = df_40klim
+        # timeseries, including each individual stargazer event up to 40k.
+        # It may not be reasonable to plot this as-is, depending on density
+        # and overall amount of data points.
+        df_result = df_raw
 
     elif os.path.exists(ARGS.stargazer_ts_resampled_outpath):
-        # This is an interesting tidbit; no 'raw' series was provided, but a
-        # previously written resampled timeseries. Read this, assuming it
-        # reflects a downsampled version of the first 40k stargazers.
+        # Case 5 above: (False, True, True). This is interesting tidbit; no
+        # 'raw' series was provided, but a previously written resampled
+        # timeseries. Read this, assuming it reflects a downsampled version of
+        # the first 40k stargazers.
         log.info(
-            "No raw star TS provided. Parse (previously resampled) stargazer time series CSV: %s",
+            "No raw ts provided. Parse (previously resampled) stargazer time series CSV: %s",
             ARGS.stargazer_ts_resampled_outpath,
         )
         df_resampled = pd.read_csv(  # type: ignore
@@ -1451,53 +1514,51 @@ def read_stars_over_time_from_csv() -> pd.DataFrame:
             df_resampled["stars_cumulative"],
         )
 
-        # Here, the variable name becomes misleading.
-        raw_ts_latest_datetime = df_resampled.index[-1]
-        df_stargazers_complete = df_resampled
+        previous_ts_latest_datetime = df_resampled.index[-1]
+        df_result = df_resampled
 
     # When ending up here: there is at least one stargazer (fast exit above for
     # case 0). Note: the existence of the file `stargazer_ts_snapshot_inpath`
     # does not mean that there are more than 40k stargazers. This makes testing
     # more credible: execute this code path often.
     if os.path.exists(ARGS.stargazer_ts_snapshot_inpath):
+
         log.info(
             "Parse (snapshot) stargazer time series CSV: %s",
             ARGS.stargazer_ts_snapshot_inpath,
         )
 
-        df_snapshots_beyond40k = pd.read_csv(  # type: ignore
+        df_snapshots = pd.read_csv(  # type: ignore
             ARGS.stargazer_ts_snapshot_inpath,
             index_col=["time_iso8601"],
             date_parser=lambda col: pd.to_datetime(col, utc=True),
         )
-        df_snapshots_beyond40k.index.rename("time", inplace=True)
+        df_snapshots.index.rename("time", inplace=True)
 
         # Unsorted input is unlikely, but still.
-        df_snapshots_beyond40k.sort_index(inplace=True)
+        df_snapshots.sort_index(inplace=True)
 
-        log.info("stargazer snapshots timeseries:\n%s", df_snapshots_beyond40k)
+        log.info("stargazer snapshots timeseries:\n%s", df_snapshots)
 
         # Defensive: select only those data points that are newer than those in
-        # df_40klim.
-        # log.info("df_snapshots_beyond40k.index: %s", df_snapshots_beyond40k.index)
-        if raw_ts_latest_datetime is not None:
-            df_snapshots_beyond40k = df_snapshots_beyond40k[
-                df_snapshots_beyond40k.index > raw_ts_latest_datetime
+        # df_raw.
+        # log.info("df_snapshots.index: %s", df_snapshots.index)
+        if previous_ts_latest_datetime is not None:
+            df_snapshots = df_snapshots[
+                df_snapshots.index > previous_ts_latest_datetime
             ]
 
         # Is at least one data point left?
-        if len(df_snapshots_beyond40k):
+        if len(df_snapshots):
             # Concatenate with 'raw' timeseries, along the same column.
-            df_snapshots_beyond40k.rename(
+            df_snapshots.rename(
                 columns={"stargazers_cumulative_snapshot": "stars_cumulative"},
                 inplace=True,
             )
 
             # On purpose: overwrite object defined above.
-            df_stargazers_complete = pd.concat(  # type: ignore
-                [df_stargazers_complete, df_snapshots_beyond40k]
-            )
-            log.info("concat result:\n%s", df_stargazers_complete)
+            df_result = pd.concat([df_result, df_snapshots])  # type: ignore
+            log.info("concat result:\n%s", df_result)
 
     # Make the stargazer timeseries that is going to be persisted via git
     # contain data from both, the raw timeseries (obtained from API) as well as
@@ -1507,8 +1568,12 @@ def read_stars_over_time_from_csv() -> pd.DataFrame:
         # The CSV file should contain integers after all (no ".0"), therefore
         # cast to int. There are no NaNs to be expected, i.e. this should work
         # reliably.
+        # Note: there is a special case when the input here was previously
+        # resampled using the same method; this should be fine but we need
+        # to confirm this: if repeated execution leads to 'data loss' then
+        # we would thin out data over time.
         df_for_csv_file = resample_to_1d_resolution(
-            df_stargazers_complete, "stars_cumulative"
+            df_result, "stars_cumulative"
         ).astype(int)
         log.info(
             "stars_cumulative, for CSV file (resampled, from raw+snapshots): %s",
@@ -1521,12 +1586,12 @@ def read_stars_over_time_from_csv() -> pd.DataFrame:
         df_for_csv_file.to_csv(tpath, index_label="time_iso8601")
         os.rename(tpath, ARGS.stargazer_ts_resampled_outpath)
 
-    df_stargazers_for_plot = df_stargazers_complete
+    df_stargazers_for_plot = df_result
 
     # Many data points? Downsample, for plotting.
     if len(df_stargazers_for_plot) > 50:
         df_stargazers_for_plot = downsample_series_to_N_points(
-            df_stargazers_complete, "stars_cumulative"
+            df_result, "stars_cumulative"
         )
 
     log.info("df_stargazers_for_plot:\n%s", df_stargazers_for_plot)

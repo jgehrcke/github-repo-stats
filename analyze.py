@@ -1019,6 +1019,28 @@ def analyse_view_clones_ts_fragments() -> pd.DataFrame:
     # Use new name for df to be kept around for returning, before reset_index()
     # so that df.index is kept meaningful.
     df_agg_for_return = df_agg
+
+    # Downsample views/clones data when there are many data points to keep
+    # the inline Vega-Lite JSON manageable (prevents report.md from exceeding
+    # GitHub's markdown rendering size limit).
+    if len(df_agg) > 500:
+        log.info(
+            "views/clones aggregate has %s data points, downsampling for plot",
+            len(df_agg),
+        )
+        timespan_hours = int(
+            pd.Timedelta(
+                df_agg.index.values[-1] - df_agg.index.values[0]
+            ).total_seconds()
+            / 3600
+        )
+        bin_width_hours = max(int(timespan_hours / 500), 1)
+        log.info("views/clones downsample bin_width_hours: %s", bin_width_hours)
+        df_agg = df_agg.resample(f"{bin_width_hours}h", origin="end").max().dropna(
+            how="all"
+        )
+        log.info("views/clones after downsample: %s data points", len(df_agg))
+
     df_agg = df_agg.reset_index()
     df_agg_views = df_agg.drop(columns=["clones_unique", "clones_total"])
     df_agg_clones = df_agg.drop(columns=["views_unique", "views_total"])
@@ -1524,7 +1546,7 @@ def read_stars_over_time_from_csv() -> pd.DataFrame:
     df_stargazers_for_plot = df_stargazers_complete
 
     # Many data points? Downsample, for plotting.
-    if len(df_stargazers_for_plot) > 50:
+    if len(df_stargazers_for_plot) > 500:
         df_stargazers_for_plot = downsample_series_to_N_points(
             df_stargazers_complete, "stars_cumulative"
         )
@@ -1567,7 +1589,7 @@ def read_forks_over_time_from_csv() -> pd.DataFrame:
         os.rename(tpath, ARGS.fork_ts_resampled_outpath)
 
     # Many data points? Downsample.
-    if len(df) > 80:
+    if len(df) > 500:
         df = downsample_series_to_N_points(df, "forks_cumulative")
 
     return df
@@ -1587,10 +1609,10 @@ def downsample_series_to_N_points(df, column):
     )
 
     # Adjust this bin width to the timeframe covered. Make it so that there
-    # are not more than ~100 data points for the entire time frame.
+    # are not more than ~500 data points for the entire time frame.
     # total_width / bin_width = n_bins -> bin_width = total_width / n_bins
     # Approximate integer result is fine.
-    bin_width_hours = int(timespan_hours / 100)
+    bin_width_hours = max(int(timespan_hours / 500), 1)
     log.info("choosing bin_width_hours: %s", bin_width_hours)
 
     # n_hour_bins = 24

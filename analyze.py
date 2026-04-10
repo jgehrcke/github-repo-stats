@@ -74,7 +74,7 @@ DATETIME_AXIS_PROPERTIES = {
     "field": "time",
     "type": "temporal",
     "title": "date",
-    "timeUnit": "yearmonthdate",
+    "timeUnit": "utcyearmonthdate",       # ← UTC prevents off-by-one for negative UTC offsets
     "axis": {"labelAngle": DATE_LABEL_ANGLE},
 }
 
